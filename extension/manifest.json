@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Kahani Capture — Forensic WhatsApp Ingestion",
+  "version": "1.0.0",
+  "description": "Cryptographically capture and hash lock live WhatsApp Web chats for Indian courts under Section 63 BSA.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "http://localhost:5050/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Kahani Capture"
+  }
+}

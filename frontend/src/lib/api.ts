@@ -33,6 +33,7 @@ export interface Evidence {
   notes: string
   uploadedBy: string
   storagePath: string
+  trustLevel?: 'LOW' | 'MEDIUM' | 'HIGH'
   createdAt: string
   updatedAt: string
 }
@@ -129,6 +130,117 @@ export const getCertificateUrl = (evidenceId: string) =>
 
 export const demoTamper = (evidenceId: string) =>
   api.post(`/demo/tamper/${evidenceId}`).then((r) => r.data)
+
+// ── Forensics & WhatsApp Analysis (Phase 4, 5, 7) ───────────────────────────
+
+export interface ChatMessage {
+  lineIndex: number
+  date: string
+  time: string
+  sender: string
+  text: string
+  type: 'message' | 'media' | 'deleted' | 'edited' | 'location' | 'system'
+  lineHash: string
+}
+
+export interface RedFlag {
+  id: string
+  severity: 'HIGH' | 'MEDIUM' | 'LOW'
+  title: string
+  description: string
+}
+
+export interface SenderInfo {
+  label: string
+  phoneNumber: string
+  source: 'in-file' | 'user-entered'
+  screenshotEvidenceId?: string | null
+}
+
+export interface CorroborationItem {
+  status: 'pending' | 'done' | 'failed'
+  by: string
+  at: string
+  note: string
+}
+
+export interface AnalysisResult {
+  messages: ChatMessage[]
+  redFlags: RedFlag[]
+  senders: SenderInfo[]
+  deletions: number
+  edits: number
+  systemEvents: number
+  trustLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+  corroboration: Record<string, CorroborationItem>
+  senderMap?: SenderInfo[]
+}
+
+export interface DiffPart {
+  type: 'same' | 'added' | 'removed'
+  value: string
+}
+
+export interface AlignedDiffItem {
+  status: 'unchanged' | 'modified' | 'added' | 'removed'
+  original: ChatMessage | null
+  counterpart: ChatMessage | null
+  diff?: DiffPart[]
+}
+
+export interface ChatDiffResult {
+  aligned: AlignedDiffItem[]
+  summary: {
+    totalOriginal: number
+    totalCounterpart: number
+    unchanged: number
+    modified: number
+    removed: number
+    added: number
+  }
+}
+
+export const getAnalysis = (evidenceId: string) =>
+  api.get<AnalysisResult>(`/evidence/${evidenceId}/analysis`).then((r) => r.data)
+
+export const updateSenderMap = (
+  evidenceId: string,
+  payload: { label: string; phoneNumber: string; source?: string; actor?: string }
+) => api.post(`/evidence/${evidenceId}/sender-map`, payload).then((r) => r.data)
+
+export const updateCorroboration = (
+  evidenceId: string,
+  item: string,
+  payload: { status: 'pending' | 'done' | 'failed'; by?: string; note?: string }
+) => api.post(`/evidence/${evidenceId}/corroboration/${item}`, payload).then((r) => r.data)
+
+export const uploadCounterpart = (evidenceId: string, formData: FormData) =>
+  api
+    .post<{ evidence: Evidence; diff: ChatDiffResult; trustLevel: 'LOW' | 'MEDIUM' | 'HIGH' }>(
+      `/evidence/${evidenceId}/counterpart`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    .then((r) => r.data)
+
+export const uploadReexport = (evidenceId: string, formData: FormData) =>
+  api
+    .post<{ evidence: Evidence; diff: ChatDiffResult; trustLevel: 'LOW' | 'MEDIUM' | 'HIGH' }>(
+      `/evidence/${evidenceId}/reexport`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    .then((r) => r.data)
+
+export const getLegalRequestDraft = (evidenceId: string, type: 'kyc' | 'cdr') =>
+  api.get<string>(`/evidence/${evidenceId}/legal-request?type=${type}`).then((r) => r.data)
+
+export const getTsr = (evidenceId: string) =>
+  api
+    .get<{ sha256: string; tsaToken: string | null; tsaTime: string | null; tsaStatus: string }>(
+      `/evidence/${evidenceId}/tsr`
+    )
+    .then((r) => r.data)
 
 // ── Health ────────────────────────────────────────────────────────────────────
 

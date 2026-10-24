@@ -13,13 +13,20 @@ const PORT = process.env.PORT || 5050;
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin, localhost, or chrome-extension URLs
+      if (!origin || origin.startsWith('http://localhost') || origin.startsWith('chrome-extension://')) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 // ---------------------------------------------------------------------------
 // Routes

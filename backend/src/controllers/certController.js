@@ -29,7 +29,7 @@ export async function getCertificate(req, res, next) {
 
     // ── QR code ──────────────────────────────────────────────────────────────
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const qrUrl = `${frontendUrl}/evidence/${evidence._id}`;
+    const qrUrl = `${frontendUrl}/verify/${evidence._id}`;
 
     // toDataURL is more reliable in ESM than toBuffer
     const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 110, margin: 1 });

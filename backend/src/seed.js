@@ -1,7 +1,10 @@
 /**
  * npm run seed
- * Creates a realistic demo case with evidence and custody events.
- * Safe to re-run: deletes any previous seed data for this case title first.
+ * Idempotently seeds the Meena case with:
+ * 1. Realistic Android WhatsApp export (encryption header, Hinglish threats from 'Rahul',
+ *    multi-line message, media omitted, deleted message, edited message, security code change).
+ * 2. Counterpart export from Rahul's device with 1 missing threat line and 1 reworded line,
+ *    linked as counterpart so the diff demo works immediately!
  */
 
 import 'dotenv/config';
@@ -12,146 +15,216 @@ import { connectDB } from './config/db.js';
 import Case from './models/Case.js';
 import Evidence from './models/Evidence.js';
 import CustodyEvent from './models/CustodyEvent.js';
-import { sha256Buffer, appendCustodyEvent } from './lib/integrity.js';
+import { sha256Buffer, appendCustodyEvent, nowIST } from './lib/integrity.js';
+import { parseWhatsAppChat } from './lib/whatsappParser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ---------------------------------------------------------------------------
-// WhatsApp chat content — 6 realistic Hinglish threatening messages
-// ---------------------------------------------------------------------------
-const CHAT_CONTENT = `WhatsApp Chat Export — Meena Kumari
-Exported on: 24/10/2026 09:50:00 IST
-------------------------------------------------------------
-[24/10/2026, 09:14:22] Suresh Malhotra: Dekh Meena, teri aukat nahi hai mujhse panga lene ki. Samjhi?
-[24/10/2026, 09:15:47] Suresh Malhotra: Khabardar agar tune aage police ya court jaisi galti ki toh anjaam bura hoga.
-[24/10/2026, 09:16:03] Suresh Malhotra: Tujhe aur tere poore ghar waalon ko dekhh lunga main. Ye mera waada hai.
-[24/10/2026, 09:18:31] Suresh Malhotra: Ek aur chance de raha hoon. Last warning hai ye teri — aage mat badh.
-[24/10/2026, 09:19:55] Suresh Malhotra: Kal shaam tak paisa wapas karo varna kya consequences honge ye tu jaanti hai.
-[24/10/2026, 09:45:12] Suresh Malhotra: Soch le achhe se. Main kya kar sakta hoon, tera pura mohalla jaanta hai.
-------------------------------------------------------------
-End of Export
+const SEED_CASE_TITLE = 'Meena — WhatsApp Threat Case';
+
+// Realistic Master Android Export (Seized from Meena Kumari's device)
+const MEENA_EXPORT_TEXT = `24/10/2026, 09:10 am - Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.
+24/10/2026, 09:12 am - Rahul: Dekh Meena, aakhri baar samjha raha hoon tujhe.
+24/10/2026, 09:14 am - Rahul: Agar tune police complaint wapas nahi li toh anjaam bohot bura hoga.
+24/10/2026, 09:15 am - Meena Kumari: Rahul please mujhe aur mere parivar ko pareshan mat karo. Maine sab sach bola hai.
+24/10/2026, 09:16 am - Rahul: Sach? Teri aukaat nahi hai court me khade hone ki.
+Tujhe pehle bhi warning di thi.
+Ab seedha tere ghar aake faisla hoga.
+24/10/2026, 09:18 am - Rahul: Kal subah tak case cancel karwa dena varna dekhna kya karta hoon.
+24/10/2026, 09:20 am - Rahul: <Media omitted>
+24/10/2026, 09:22 am - Rahul: This message was deleted
+24/10/2026, 09:25 am - Rahul: Shaam 5 baje tak sab theek kar dena <This message was edited>
+24/10/2026, 09:28 am - Rahul: Yaad rakhna mera naam Rahul Sharma hai, poora shehar jaanta hai mujhe.
+24/10/2026, 09:30 am - Rahul's security code changed. Tap to learn more.
+24/10/2026, 09:35 am - Meena Kumari: Main darrne waali nahi hoon. Main court me sab submit karungi.
 `;
 
-const SEED_CASE_TITLE = 'Meena — WhatsApp Threat Case';
+// Counterpart Export (Seized from Rahul's device)
+// Diff: Missing the line "Sach? Teri aukaat nahi hai...", and the 09:18 am threat is worded innocently
+const RAHUL_COUNTERPART_TEXT = `24/10/2026, 09:10 am - Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.
+24/10/2026, 09:12 am - Rahul: Dekh Meena, aakhri baar samjha raha hoon tujhe.
+24/10/2026, 09:14 am - Rahul: Agar tune police complaint wapas nahi li toh anjaam bohot bura hoga.
+24/10/2026, 09:15 am - Meena Kumari: Rahul please mujhe aur mere parivar ko pareshan mat karo. Maine sab sach bola hai.
+24/10/2026, 09:18 am - Rahul: Kal subah aapas me milkar sab clear kar lenge aage badho.
+24/10/2026, 09:20 am - Rahul: <Media omitted>
+24/10/2026, 09:25 am - Rahul: Shaam 5 baje tak sab theek kar dena <This message was edited>
+24/10/2026, 09:28 am - Rahul: Yaad rakhna mera naam Rahul Sharma hai, poora shehar jaanta hai mujhe.
+24/10/2026, 09:30 am - Rahul's security code changed. Tap to learn more.
+24/10/2026, 09:35 am - Meena Kumari: Main darrne waali nahi hoon. Main court me sab submit karungi.
+`;
 
 async function seed() {
   console.log('[SEED] Connecting to MongoDB…');
   await connectDB();
   console.log('[SEED] Connected ✓');
 
-  // ── Idempotency: remove previous seed (DB + uploads on disk) ─────────────
-  const oldCase = await Case.findOne({ title: SEED_CASE_TITLE }).lean();
-  if (oldCase) {
-    // Delete uploads directory for old case (actual files on disk)
-    const oldUploadsDir = path.join(__dirname, '..', 'uploads', String(oldCase._id));
-    if (fs.existsSync(oldUploadsDir)) {
-      fs.rmSync(oldUploadsDir, { recursive: true, force: true });
-      console.log(`[SEED] Removed old uploads dir: ${oldUploadsDir}`);
+  // ── 1. Idempotency cleanup ───────────────────────────────────────────────
+  const existingCase = await Case.findOne({ title: SEED_CASE_TITLE });
+  if (existingCase) {
+    const caseUploads = path.join(__dirname, '..', 'uploads', String(existingCase._id));
+    if (fs.existsSync(caseUploads)) {
+      fs.rmSync(caseUploads, { recursive: true, force: true });
     }
-    // Delete DB records in dependency order
-    const oldEvidences = await Evidence.find({ caseId: oldCase._id }).lean();
-    for (const ev of oldEvidences) {
+    const linkedUploads = path.join(__dirname, '..', 'uploads', 'linked', String(existingCase._id));
+    if (fs.existsSync(linkedUploads)) {
+      fs.rmSync(linkedUploads, { recursive: true, force: true });
+    }
+
+    const evidences = await Evidence.find({ caseId: existingCase._id }).lean();
+    for (const ev of evidences) {
       await CustodyEvent.deleteMany({ evidenceId: ev._id });
     }
-    await Evidence.deleteMany({ caseId: oldCase._id });
-    await Case.deleteOne({ _id: oldCase._id });
-    console.log('[SEED] Removed previous seed DB records.');
+    await Evidence.deleteMany({ caseId: existingCase._id });
+    await Case.deleteOne({ _id: existingCase._id });
+    console.log('[SEED] Removed prior seed case & files.');
   }
 
-  // ── Create case ───────────────────────────────────────────────────────────
+  // ── 2. Create Master Case ────────────────────────────────────────────────
   const caseDoc = await Case.create({
     title: SEED_CASE_TITLE,
     description:
-      'Criminal complaint by Meena Kumari regarding threatening WhatsApp messages received from Suresh Malhotra on 24-Oct-2026. Section 506 IPC / BNS.',
+      'Criminal complaint by Meena Kumari regarding threatening WhatsApp messages received from Rahul on 24-Oct-2026. Offences under Section 351(2) BNS (Criminal Intimidation).',
     partyName: 'Meena Kumari',
     partyAddress: 'Flat 3C, Sundar Nagar Apartments, Sector 14, New Delhi — 110003',
   });
-  console.log(`[SEED] Case created: ${caseDoc._id}`);
+  console.log(`[SEED] Created Case: ${caseDoc._id}`);
 
-  // ── Write evidence file ───────────────────────────────────────────────────
   const uploadsDir = path.join(__dirname, '..', 'uploads', String(caseDoc._id));
   fs.mkdirSync(uploadsDir, { recursive: true });
 
-  const timestamp = Date.now();
-  const filename = 'whatsapp_chat_export.txt';
-  const storedFilename = `${timestamp}-${filename}`;
-  const filePath = path.join(uploadsDir, storedFilename);
+  // ── 3. Write Master Evidence File ────────────────────────────────────────
+  const masterFilename = 'whatsapp_chat_export.txt';
+  const masterStored = `${Date.now()}-${masterFilename}`;
+  const masterPath = path.join(uploadsDir, masterStored);
+  fs.writeFileSync(masterPath, MEENA_EXPORT_TEXT, 'utf8');
 
-  fs.writeFileSync(filePath, CHAT_CONTENT, 'utf8');
-  console.log(`[SEED] Evidence file written: ${filePath}`);
+  const masterBuffer = Buffer.from(MEENA_EXPORT_TEXT, 'utf8');
+  const masterSha256 = sha256Buffer(masterBuffer);
 
-  // ── Compute hash ──────────────────────────────────────────────────────────
-  const fileBuffer = Buffer.from(CHAT_CONTENT, 'utf8');
-  const sha256 = sha256Buffer(fileBuffer);
-  console.log(`[SEED] SHA-256: ${sha256}`);
+  // Parse chat to generate line hashes & discovered senders
+  const masterAnalysis = parseWhatsAppChat(MEENA_EXPORT_TEXT, new Date());
 
-  // ── Create evidence record ────────────────────────────────────────────────
-  const evidenceDoc = await Evidence.create({
+  const masterEvidence = await Evidence.create({
     caseId: caseDoc._id,
-    filename,
-    sizeBytes: fileBuffer.length,
+    filename: masterFilename,
+    sizeBytes: masterBuffer.length,
     mimeType: 'text/plain',
-    sha256,
-    clientSha256: sha256,          // client confirmed the same hash
+    sha256: masterSha256,
+    clientSha256: masterSha256,
     deviceType: 'Mobile',
     makeModel: 'Samsung Galaxy A52',
     serialNo: 'R5CX501ABCD',
-    deviceId: '355123456789012',   // IMEI
-    notes:
-      'WhatsApp chat backup exported via "Export Chat" → saved as .txt. ' +
-      'Phone belongs to complainant Meena Kumari.',
+    deviceId: '355123456789012', // IMEI
+    notes: 'Primary evidence: Seized mobile phone export of complainant Meena Kumari.',
     uploadedBy: 'Meena Kumari',
-    storagePath: filePath,
+    storagePath: masterPath,
+    declarationAccepted: true,
+    uploaderIp: '103.21.124.5',
+    userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A525F)',
+    senderMap: [
+      { label: 'Rahul', phoneNumber: '+91 98765 43210', source: 'user-entered', screenshotEvidenceId: null },
+      { label: 'Meena Kumari', phoneNumber: '+91 99112 23344', source: 'user-entered', screenshotEvidenceId: null },
+    ],
+    lineHashes: masterAnalysis.messages.map((m) => ({
+      lineIndex: m.lineIndex,
+      hash: m.lineHash,
+      raw: `${m.date}|${m.time}|${m.sender}|${m.text}`,
+    })),
+    corroboration: {
+      senderNumberRecorded: { status: 'done', by: 'Insp. R. Verma', at: nowIST(), note: 'Verified against WhatsApp contact info' },
+      counterpartMatch: { status: 'done', by: 'Forensic Lab', at: nowIST(), note: 'Counterpart chat compared with diff engine' },
+      freshReexport: { status: 'pending', by: '', at: '', note: '' },
+      telecomKyc: { status: 'pending', by: '', at: '', note: '' },
+      cdrLocation: { status: 'pending', by: '', at: '', note: '' },
+      deviceForensics: { status: 'done', by: 'Arjun Mehta — Cyber Lab', at: nowIST(), note: 'Cellebrite UFED 4PC image verified' },
+      expertCertificate: { status: 'done', by: 'Dr. P. K. Sen', at: nowIST(), note: 'Signed Section 63 BSA certificate issued' },
+    },
+    trustLevel: 'HIGH', // 3 independent items + expertCert = HIGH
+    linkedType: 'original',
+    tsaStatus: 'verified',
+    tsaTime: new Date().toISOString(),
   });
-  console.log(`[SEED] Evidence created: ${evidenceDoc._id}`);
+  console.log(`[SEED] Created Master Evidence: ${masterEvidence._id}`);
 
-  // ── Append custody events ─────────────────────────────────────────────────
-
-  // 1. Genesis — received & hash locked (Party)
-  await appendCustodyEvent(evidenceDoc._id, {
+  // ── 4. Append Master Custody Events ──────────────────────────────────────
+  await appendCustodyEvent(masterEvidence._id, {
     action: 'Evidence received & hash locked',
     actor: 'Meena Kumari',
     actorRole: 'Party',
-    details:
-      `Complainant submitted WhatsApp chat export from Samsung Galaxy A52 ` +
-      `(IMEI: 355123456789012). SHA-256 computed and locked: ${sha256}.`,
+    details: `SHA-256: ${masterSha256} | Declaration: Genuine evidence under BNS accepted | IP: 103.21.124.5`,
   });
-  console.log('[SEED] Custody event 1 appended.');
 
-  // 2. Reviewed by counsel (Lawyer)
-  await appendCustodyEvent(evidenceDoc._id, {
+  await appendCustodyEvent(masterEvidence._id, {
     action: 'Evidence reviewed by counsel',
     actor: 'Adv. Ravi Sharma',
     actorRole: 'Lawyer',
-    details:
-      'Counsel Adv. Ravi Sharma (Bar No. DL/2018/4521) reviewed the chat export ' +
-      'at the complainant\'s residence. File integrity confirmed against stored hash.',
+    details: 'Counsel reviewed the chat export (Bar No. DL/2018/4521). Hash integrity verified.',
   });
-  console.log('[SEED] Custody event 2 appended.');
 
-  // 3. Forensic copy created (Expert)
-  await appendCustodyEvent(evidenceDoc._id, {
+  await appendCustodyEvent(masterEvidence._id, {
     action: 'Forensic copy created and verified',
     actor: 'Arjun Mehta — Delhi Cyber Forensics Lab',
     actorRole: 'Expert',
-    details:
-      'Forensic copy created using Cellebrite UFED 4PC v7.58. ' +
-      'SHA-256 of copy matches original. Write-blocked device image archived.',
+    details: 'Physical extraction via Cellebrite UFED. Write-blocked forensic bit-stream image archived.',
   });
-  console.log('[SEED] Custody event 3 appended.');
 
-  // ── Summary ───────────────────────────────────────────────────────────────
-  console.log('\n[SEED] ✓ Done!');
+  await appendCustodyEvent(masterEvidence._id, {
+    action: 'Trusted timestamp obtained from FreeTSA',
+    actor: 'FreeTSA RFC 3161 Service',
+    actorRole: 'Court',
+    details: `Cryptographic RFC 3161 TSR stamped. Hash anchor locked with international time authority.`,
+  });
+
+  // ── 5. Write Linked Counterpart Evidence File ────────────────────────────
+  const cpFilename = 'rahul_counterpart_export.txt';
+  const cpStored = `${Date.now()}-${cpFilename}`;
+  const cpPath = path.join(uploadsDir, cpStored);
+  fs.writeFileSync(cpPath, RAHUL_COUNTERPART_TEXT, 'utf8');
+
+  const cpBuffer = Buffer.from(RAHUL_COUNTERPART_TEXT, 'utf8');
+  const cpSha256 = sha256Buffer(cpBuffer);
+
+  const cpAnalysis = parseWhatsAppChat(RAHUL_COUNTERPART_TEXT, new Date());
+
+  const cpEvidence = await Evidence.create({
+    caseId: caseDoc._id,
+    filename: cpFilename,
+    sizeBytes: cpBuffer.length,
+    mimeType: 'text/plain',
+    sha256: cpSha256,
+    clientSha256: cpSha256,
+    deviceType: 'Mobile',
+    makeModel: 'OnePlus 11 5G',
+    serialNo: 'OP11-884210',
+    deviceId: '358992019481721',
+    notes: 'Counterpart export obtained from accused Rahul Sharma during formal inquiry.',
+    uploadedBy: 'Cyber Crime Investigation Unit',
+    storagePath: cpPath,
+    declarationAccepted: true,
+    linkedType: 'counterpart',
+    parentEvidenceId: masterEvidence._id,
+    lineHashes: cpAnalysis.messages.map((m) => ({
+      lineIndex: m.lineIndex,
+      hash: m.lineHash,
+      raw: `${m.date}|${m.time}|${m.sender}|${m.text}`,
+    })),
+    trustLevel: 'MEDIUM',
+  });
+  console.log(`[SEED] Created Counterpart Evidence: ${cpEvidence._id}`);
+
+  await appendCustodyEvent(cpEvidence._id, {
+    action: 'Counterpart evidence seized & hash locked',
+    actor: 'Inspector R. Verma',
+    actorRole: 'Expert',
+    details: `SHA-256: ${cpSha256} | Seized from OnePlus 11 (Accused) | Linked to master ${masterEvidence._id}`,
+  });
+
+  console.log('\n[SEED] ✓ Done! All demo data seeded.');
   console.log('─'.repeat(60));
   console.log(`  Case ID     : ${caseDoc._id}`);
-  console.log(`  Evidence ID : ${evidenceDoc._id}`);
-  console.log(`  SHA-256     : ${sha256}`);
-  console.log(`  File        : ${filePath}`);
-  console.log('─'.repeat(60));
-  console.log('  Test commands:');
-  console.log(`  curl http://localhost:5050/api/cases/${caseDoc._id}`);
-  console.log(`  curl http://localhost:5050/api/evidence/${evidenceDoc._id}`);
-  console.log(`  curl http://localhost:5050/api/evidence/${evidenceDoc._id}/verify-chain`);
+  console.log(`  Master Ev.  : ${masterEvidence._id}`);
+  console.log(`  Counterpart : ${cpEvidence._id}`);
+  console.log(`  Master Hash : ${masterSha256}`);
   console.log('─'.repeat(60));
 
   process.exit(0);

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kahani Capture</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 340px;
+      background-color: #0B0B0F;
+      color: #F1F1F3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: #10B981;
+      letter-spacing: -0.5px;
+    }
+    .badge {
+      font-size: 10px;
+      font-family: monospace;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10B981;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 5px;
+    }
+    select, input {
+      width: 100%;
+      background: #14141A;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #FFF;
+      font-size: 12px;
+      outline: none;
+    }
+    select:focus, input:focus {
+      border-color: #10B981;
+    }
+    button {
+      width: 100%;
+      background: #10B981;
+      color: #0B0B0F;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    button:hover { background: #34D399; }
+    button:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; }
+    #status {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      display: none;
+      line-height: 1.4;
+    }
+    .status-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34D399;
+    }
+    .status-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #F87171;
+    }
+    .hash-val {
+      font-family: monospace;
+      font-size: 10px;
+      word-break: break-all;
+      color: #10B981;
+      margin-top: 4px;
+    }
+    a.link {
+      color: #34D399;
+      text-decoration: underline;
+      display: inline-block;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Kahani Capture</div>
+    <div class="badge">SEC 63 BSA</div>
+  </div>
+
+  <div class="form-group">
+    <label for="caseSelect">Target Case Matter</label>
+    <select id="caseSelect">
+      <option value="">Loading active cases...</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="capturedBy">Investigator / Custodian Name</label>
+    <input type="text" id="capturedBy" placeholder="e.g. Insp. R. Verma" value="Investigator" />
+  </div>
+
+  <button id="captureBtn">
+    <span>Capture Last 10 Messages</span>
+  </button>
+
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

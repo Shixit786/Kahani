@@ -22,8 +22,15 @@ import {
   Zap,
   Check,
   Copy,
-  FileSignature,
+  Phone,
   FileText,
+  MessageSquare,
+  ShieldAlert,
+  GitCompare,
+  ExternalLink,
+  ChevronRight,
+  Info,
+  Radio,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Card from '../components/Card'
@@ -40,10 +47,19 @@ import {
   demoTamper,
   addCustodyEvent,
   getCertificateUrl,
+  getAnalysis,
+  updateSenderMap,
+  updateCorroboration,
+  uploadCounterpart,
+  uploadReexport,
+  getLegalRequestDraft,
+  getTsr,
   type Evidence,
   type CustodyEvent,
   type VerifyFileResult,
   type VerifyChainResult,
+  type AnalysisResult,
+  type ChatDiffResult,
 } from '../lib/api'
 
 function formatBytes(bytes: number): string {
@@ -123,6 +139,32 @@ export default function EvidenceDetail() {
   const [custodyChain, setCustodyChain] = useState<CustodyEvent[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Active Forensic Tab
+  const [forensicTab, setForensicTab] = useState<'messages' | 'report' | 'senders' | 'corroboration' | 'diff'>('messages')
+
+  // Analysis State (Phase 4 & 5)
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false)
+
+  // TSR info (Phase 7)
+  const [tsrInfo, setTsrInfo] = useState<{ tsaStatus: string; tsaTime: string | null } | null>(null)
+
+  // Sender Map inputs
+  const [phoneInputs, setPhoneInputs] = useState<Record<string, string>>({})
+  const [savingPhone, setSavingPhone] = useState<string | null>(null)
+
+  // Legal Request Draft Modal
+  const [draftModalOpen, setDraftModalOpen] = useState(false)
+  const [draftType, setDraftType] = useState<'kyc' | 'cdr'>('kyc')
+  const [draftContent, setDraftContent] = useState('')
+  const [loadingDraft, setLoadingDraft] = useState(false)
+  const [copiedDraft, setCopiedDraft] = useState(false)
+
+  // Compare / Diff State (Phase 5)
+  const [diffSubTab, setDiffSubTab] = useState<'counterpart' | 'reexport'>('counterpart')
+  const [diffResult, setDiffResult] = useState<ChatDiffResult | null>(null)
+  const [uploadingDiff, setUploadingDiff] = useState(false)
+
   // Verify File State
   const [verifyingFile, setVerifyingFile] = useState(false)
   const [fileVerifyResult, setFileVerifyResult] = useState<VerifyFileResult | null>(null)
@@ -154,6 +196,26 @@ export default function EvidenceDetail() {
       const data = await getEvidenceById(id)
       setEvidence(data.evidence)
       setCustodyChain(data.custodyChain)
+
+      // Fetch TSR status
+      getTsr(id).then((t) => setTsrInfo(t)).catch(() => {})
+
+      // Fetch Analysis if text/WhatsApp file
+      if (data.evidence.filename.endsWith('.txt') || data.evidence.mimeType.includes('text')) {
+        setLoadingAnalysis(true)
+        getAnalysis(id)
+          .then((res) => {
+            setAnalysis(res)
+            // Initialize phone inputs
+            const initialInputs: Record<string, string> = {}
+            res.senders.forEach((s) => {
+              initialInputs[s.label] = s.phoneNumber || ''
+            })
+            setPhoneInputs(initialInputs)
+          })
+          .catch((e) => console.error(e))
+          .finally(() => setLoadingAnalysis(false))
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.message || 'Failed to load evidence record')
     } finally {
@@ -200,7 +262,6 @@ export default function EvidenceDetail() {
       } else {
         toast.error('File Altered ✗ Byte mismatch detected!')
       }
-      // Re-fetch evidence to show new verification custody event
       await loadEvidence()
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.message || 'File verification failed')
@@ -219,7 +280,6 @@ export default function EvidenceDetail() {
         icon: '⚠️',
         duration: 4000,
       })
-      // Reload custody events & verify chain immediately so node pulses red
       await loadEvidence()
       const check = await verifyChain(id)
       setChainVerifyResult(check)
@@ -249,6 +309,82 @@ export default function EvidenceDetail() {
       toast.error(err.response?.data?.error || err.message || 'Failed to append custody event')
     } finally {
       setAddingEvent(false)
+    }
+  }
+
+  // Save Sender Phone Mapping
+  const handleSavePhone = async (label: string) => {
+    if (!id) return
+    const phoneNumber = phoneInputs[label]
+    try {
+      setSavingPhone(label)
+      await updateSenderMap(id, { label, phoneNumber, actor: 'Forensic Analyst' })
+      toast.success(`Sender "${label}" mapped to ${phoneNumber || 'pending'}`)
+      await loadEvidence()
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to save phone mapping')
+    } finally {
+      setSavingPhone(null)
+    }
+  }
+
+  // Update Corroboration Item
+  const handleToggleCorroboration = async (itemKey: string, currentStatus: string) => {
+    if (!id) return
+    const newStatus = currentStatus === 'done' ? 'pending' : 'done'
+    try {
+      await updateCorroboration(id, itemKey, {
+        status: newStatus,
+        by: 'Forensic Investigator',
+        note: `Status updated to ${newStatus}`,
+      })
+      toast.success(`Corroboration updated: ${itemKey}`)
+      await loadEvidence()
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to update corroboration')
+    }
+  }
+
+  // Open Legal Request Draft Modal
+  const handleOpenDraft = async (type: 'kyc' | 'cdr') => {
+    if (!id) return
+    setDraftType(type)
+    setDraftModalOpen(true)
+    setLoadingDraft(true)
+    try {
+      const text = await getLegalRequestDraft(id, type)
+      setDraftContent(text)
+    } catch {
+      toast.error('Failed to generate draft')
+    } finally {
+      setLoadingDraft(false)
+    }
+  }
+
+  // Upload Counterpart or Re-export for Diff
+  const handleDiffUpload = async (file: File) => {
+    if (!id) return
+    try {
+      setUploadingDiff(true)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('uploadedBy', diffSubTab === 'counterpart' ? 'Counterpart Party' : 'Forensic Custodian')
+      formData.append('witness', 'Certified Auditor')
+
+      let res: any
+      if (diffSubTab === 'counterpart') {
+        res = await uploadCounterpart(id, formData)
+      } else {
+        res = await uploadReexport(id, formData)
+      }
+
+      setDiffResult(res.diff)
+      toast.success(`${diffSubTab === 'counterpart' ? 'Counterpart' : 'Fresh re-export'} analyzed and diff generated!`)
+      await loadEvidence()
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to analyze diff')
+    } finally {
+      setUploadingDiff(false)
     }
   }
 
@@ -294,17 +430,28 @@ export default function EvidenceDetail() {
     )
   }
 
+  const currentTrust = analysis?.trustLevel || evidence.trustLevel || 'LOW'
+
   return (
     <div className="min-h-screen pt-20 pb-20">
       <div className="max-w-6xl mx-auto px-6">
         {/* Back Link to Case */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Link
             to={`/cases/${evidence.caseId}`}
             className="inline-flex items-center gap-2 text-xs text-white/50 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Case Matter</span>
+          </Link>
+
+          {/* Public Verification Link (Phase 7) */}
+          <Link
+            to={`/verify/${evidence._id}`}
+            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+          >
+            <span>Public Verification Portal</span>
+            <ExternalLink className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -314,15 +461,61 @@ export default function EvidenceDetail() {
 
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 relative z-10">
             <div className="space-y-4 max-w-3xl">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <Badge variant="verified" size="sm" className="font-mono gap-1">
                   <Lock className="w-3 h-3" />
                   <span>HASH LOCKED</span>
                 </Badge>
-                <span className="text-xs text-white/40 font-mono">ID: {evidence._id}</span>
-                <span className="text-xs text-white/40">•</span>
-                <span className="text-xs text-white/50">
-                  Uploader: <span className="text-white font-medium">{evidence.uploadedBy}</span>
+
+                {/* Phase 6: Trust Badge near title */}
+                <div
+                  className="group relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-help transition-all"
+                  style={{
+                    backgroundColor:
+                      currentTrust === 'HIGH'
+                        ? 'rgba(16, 185, 129, 0.15)'
+                        : currentTrust === 'MEDIUM'
+                        ? 'rgba(245, 158, 11, 0.15)'
+                        : 'rgba(239, 68, 68, 0.15)',
+                    color:
+                      currentTrust === 'HIGH'
+                        ? '#34d399'
+                        : currentTrust === 'MEDIUM'
+                        ? '#fbbf24'
+                        : '#f87171',
+                    border: `1px solid ${
+                      currentTrust === 'HIGH'
+                        ? 'rgba(16, 185, 129, 0.3)'
+                        : currentTrust === 'MEDIUM'
+                        ? 'rgba(245, 158, 11, 0.3)'
+                        : 'rgba(239, 68, 68, 0.3)'
+                    }`,
+                  }}
+                >
+                  <span className="w-2 h-2 rounded-full animate-ping"
+                    style={{
+                      backgroundColor:
+                        currentTrust === 'HIGH' ? '#10b981' : currentTrust === 'MEDIUM' ? '#f59e0b' : '#ef4444',
+                    }}
+                  />
+                  <span>
+                    {currentTrust === 'HIGH'
+                      ? '🟢 High — Expert Verified'
+                      : currentTrust === 'MEDIUM'
+                      ? '🟡 Medium — Corroborated'
+                      : '🔴 Low — Self-reported (Needs Verification)'}
+                  </span>
+
+                  {/* Tooltip */}
+                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-72 p-2.5 bg-[#1B1B24] border border-white/10 rounded-xl text-[11px] text-white/80 shadow-2xl z-30 font-normal leading-relaxed">
+                    Trust comes from independent sources (telecom KYC, counterpart exports, device forensics), not from the file itself.
+                  </div>
+                </div>
+
+                {/* Phase 7: RFC 3161 TSA Badge */}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  <Radio className="w-3 h-3" />
+                  <span>RFC 3161 TSA {tsrInfo?.tsaStatus === 'verified' ? 'Stamped' : 'Anchor'}</span>
                 </span>
               </div>
 
@@ -335,7 +528,8 @@ export default function EvidenceDetail() {
                     {evidence.filename}
                   </h1>
                   <p className="text-xs text-white/40 mt-0.5">
-                    {formatBytes(evidence.sizeBytes)} • {evidence.mimeType || 'Binary file'}
+                    {formatBytes(evidence.sizeBytes)} • {evidence.mimeType || 'Binary file'} • Uploaded by{' '}
+                    <span className="text-white font-medium">{evidence.uploadedBy}</span>
                   </p>
                 </div>
               </div>
@@ -377,7 +571,7 @@ export default function EvidenceDetail() {
               )}
             </div>
 
-              {/* Certificate Download Button (Phase 3 Draft requirement) */}
+            {/* Certificate Download Button (Phase 3 Draft requirement) */}
             <div className="shrink-0 flex flex-col gap-2.5 lg:w-72">
               <a
                 href={getCertificateUrl(evidence._id)}
@@ -441,6 +635,502 @@ export default function EvidenceDetail() {
             </div>
           )}
         </Card>
+
+        {/* ── Phase 6: WhatsApp Forensics Suite ──────────────────────── */}
+        {analysis && (
+          <div className="mb-8 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  WhatsApp <span className="font-serif italic text-white/50">Forensic Suite</span>
+                </h2>
+                <p className="text-xs text-white/40 mt-0.5">
+                  Content classification, sender mapping, red flags, corroboration checklist & diff audit
+                </p>
+              </div>
+
+              {/* Forensic Navigation Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-surface rounded-xl border border-white/10 text-xs overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setForensicTab('messages')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                    forensicTab === 'messages' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  Messages ({analysis.messages.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForensicTab('report')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                    forensicTab === 'report' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  <span>Flags</span>
+                  {analysis.redFlags.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-300">
+                      {analysis.redFlags.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForensicTab('senders')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                    forensicTab === 'senders' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  Who are these people?
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForensicTab('corroboration')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                    forensicTab === 'corroboration' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  Corroboration
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForensicTab('diff')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1 ${
+                    forensicTab === 'diff' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  <GitCompare className="w-3.5 h-3.5" />
+                  <span>Compare Diff</span>
+                </button>
+              </div>
+            </div>
+
+            {/* TAB 1: Messages View with WhatsApp bubble styling */}
+            {forensicTab === 'messages' && (
+              <Card className="p-6 bg-surface border-white/10 space-y-4">
+                <div className="flex items-center justify-between text-xs text-white/50 pb-3 border-b border-white/5">
+                  <span>Chat Timeline (Hover over any message bubble to view line-level SHA-256 hash)</span>
+                  <div className="flex items-center gap-3">
+                    <span>{analysis.deletions} deletions</span>
+                    <span>•</span>
+                    <span>{analysis.edits} edits</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                  {analysis.messages.map((m) => {
+                    const isSystem = m.type === 'system'
+                    const isDeleted = m.type === 'deleted'
+                    const isEdited = m.type === 'edited'
+                    const isSecurityChange =
+                      m.text.includes('security code') || m.text.includes('phone number')
+
+                    if (isSecurityChange) {
+                      return (
+                        <div
+                          key={m.lineIndex}
+                          className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center text-xs text-amber-300 font-medium"
+                        >
+                          ⚠️ {m.text} — Sender changed device or reinstalled WhatsApp
+                        </div>
+                      )
+                    }
+
+                    if (isSystem) {
+                      return (
+                        <div
+                          key={m.lineIndex}
+                          className="py-1 px-3 rounded-full bg-white/5 text-center text-[11px] text-white/40 max-w-md mx-auto"
+                        >
+                          {m.text}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={m.lineIndex}
+                        className={`group relative flex flex-col p-3 rounded-2xl max-w-lg transition-all ${
+                          isDeleted
+                            ? 'bg-white/5 border border-white/5 text-white/40 italic'
+                            : 'bg-white/[0.07] border border-white/10 hover:border-emerald-500/30'
+                        }`}
+                      >
+                        {/* Bubble Header */}
+                        <div className="flex items-center justify-between gap-2 mb-1 text-[11px]">
+                          <span className="font-semibold text-emerald-400/90">{m.sender}</span>
+                          <span className="text-white/30 font-mono text-[10px]">
+                            {m.date} {m.time}
+                          </span>
+                        </div>
+
+                        {/* Bubble Body */}
+                        <div className="text-xs text-white/90 whitespace-pre-wrap leading-relaxed">
+                          {isDeleted ? (
+                            <span className="flex items-center gap-1.5 text-white/40">
+                              <span>Deleted at {m.time}</span>
+                            </span>
+                          ) : (
+                            m.text
+                          )}
+                        </div>
+
+                        {/* Edited badge */}
+                        {isEdited && (
+                          <div className="mt-1 self-end">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-amber-300">
+                              edited (original unknown)
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Hover Line Hash */}
+                        <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-white/30 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <span>LINE #{m.lineIndex} HASH:</span>
+                          <HashText hash={m.lineHash} length={8} className="text-[10px]" />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* TAB 2: Forensic Report (Red Flags) */}
+            {forensicTab === 'report' && (
+              <Card className="p-6 bg-surface border-white/10 space-y-4">
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span>
+                    <strong>Forensic Notice:</strong> Red flags guide the expert — they do not prove fabrication. Every anomaly should be corroborated with CDR or device images.
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {analysis.redFlags.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-white/50">
+                      No obvious forensic anomalies detected in export structure.
+                    </div>
+                  ) : (
+                    analysis.redFlags.map((flag) => (
+                      <div
+                        key={flag.id}
+                        className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-white">{flag.title}</h4>
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                              flag.severity === 'HIGH'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                : flag.severity === 'MEDIUM'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                            }`}
+                          >
+                            {flag.severity} SEVERITY
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/60 leading-relaxed">{flag.description}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {/* TAB 3: "Who are these people?" Sender Phone Mapping */}
+            {forensicTab === 'senders' && (
+              <Card className="p-6 bg-surface border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Participant Identity & MSISDN Mapping</h3>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Helper: WhatsApp → open chat → tap name → Contact info
+                    </p>
+                  </div>
+                  <Badge variant="neutral" size="sm" className="self-start sm:self-auto font-mono">
+                    {analysis.senders.length} Senders Found
+                  </Badge>
+                </div>
+
+                <div className="space-y-3">
+                  {analysis.senders.map((s) => {
+                    const isSavedNumber = /^[+]?[\d\s-]{10,}$/.test(s.phoneNumber)
+
+                    return (
+                      <div
+                        key={s.label}
+                        className="p-4 rounded-xl bg-black/40 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white text-sm">{s.label}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/5">
+                              {s.source === 'in-file' ? 'Extracted from file' : 'User entered'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-white/40">
+                            {s.phoneNumber
+                              ? `Phone MSISDN: ${s.phoneNumber}`
+                              : 'Warning: Contact saved by name only — phone number required for CDR requisition.'}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="e.g. +91 98765 43210"
+                            value={phoneInputs[s.label] ?? ''}
+                            onChange={(e) =>
+                              setPhoneInputs({ ...phoneInputs, [s.label]: e.target.value })
+                            }
+                            className="w-48 text-xs font-mono"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleSavePhone(s.label)}
+                            disabled={savingPhone === s.label}
+                          >
+                            {savingPhone === s.label ? 'Saving...' : 'Save Phone'}
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* TAB 4: Corroboration Checklist (Phase 5) */}
+            {forensicTab === 'corroboration' && (
+              <Card className="p-6 bg-surface border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Corroboration Verification Checklist</h3>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Trust score increases only as independent corroboration items are marked completed.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => handleOpenDraft('kyc')}>
+                      Draft KYC Notice
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleOpenDraft('cdr')}>
+                      Draft CDR Requisition
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {[
+                    { key: 'senderNumberRecorded', title: 'Sender Phone Number Documented', desc: 'True MSISDN verified from chat contact info card.' },
+                    { key: 'counterpartMatch', title: 'Counterpart Phone Export Matched', desc: 'Export from other party matches timestamp & text window.' },
+                    { key: 'freshReexport', title: 'Fresh Device Re-export Obtained', desc: 'Direct acquisition under independent supervision.' },
+                    { key: 'telecomKyc', title: 'Telecom KYC & CAF Certified', desc: 'Subscriber registration form certified by Nodal Officer under Sec 94 BNSS.' },
+                    { key: 'cdrLocation', title: 'CDR & Cell Tower Location Corroboration', desc: 'Call Detail Records corroborate active device connection.' },
+                    { key: 'deviceForensics', title: 'Physical Device Forensics (Cellebrite / UFED)', desc: 'Bit-stream image extracted and verified on write-blocker.' },
+                    { key: 'expertCertificate', title: 'Independent Section 63 BSA Expert Certificate', desc: 'Forensic analyst issued formal certificate under Section 63(4)(c) BSA.' },
+                  ].map((item) => {
+                    const statusObj = (analysis.corroboration as any)?.[item.key]
+                    const isDone = statusObj?.status === 'done'
+
+                    return (
+                      <div
+                        key={item.key}
+                        className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 transition-all ${
+                          isDone
+                            ? 'bg-emerald-500/5 border-emerald-500/30'
+                            : 'bg-black/30 border-white/5'
+                        }`}
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-white">{item.title}</span>
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                                isDone
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : 'bg-white/5 text-white/40'
+                              }`}
+                            >
+                              {isDone ? 'COMPLETED' : 'PENDING'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-white/40">{item.desc}</p>
+                          {statusObj?.at && (
+                            <div className="text-[10px] font-mono text-white/30 pt-0.5">
+                              Verified by: {statusObj.by || 'Auditor'} on {statusObj.at}
+                            </div>
+                          )}
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant={isDone ? 'ghost' : 'primary'}
+                          onClick={() => handleToggleCorroboration(item.key, statusObj?.status || 'pending')}
+                        >
+                          {isDone ? 'Mark Pending' : 'Mark Done'}
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* TAB 5: Compare Diff Panel (Phase 5) */}
+            {forensicTab === 'diff' && (
+              <Card className="p-6 bg-surface border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Cryptographic Chat Diff Engine</h3>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Upload a counterpart export or fresh re-export to align messages within the original window.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 p-1 bg-black/40 rounded-lg border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setDiffSubTab('counterpart')}
+                      className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                        diffSubTab === 'counterpart' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'
+                      }`}
+                    >
+                      Counterpart Chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiffSubTab('reexport')}
+                      className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                        diffSubTab === 'reexport' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'
+                      }`}
+                    >
+                      Fresh Re-export
+                    </button>
+                  </div>
+                </div>
+
+                {/* Upload dropzone for counterpart / re-export */}
+                <div className="relative border border-dashed border-white/15 hover:border-emerald-500/40 rounded-xl p-4 text-center transition-colors bg-black/20">
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleDiffUpload(f)
+                    }}
+                    disabled={uploadingDiff}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center gap-1">
+                    <Upload className="w-5 h-5 text-white/30" />
+                    <span className="text-xs font-medium text-white/80">
+                      {uploadingDiff
+                        ? 'Aligning and computing diff...'
+                        : `Drop or browse ${diffSubTab} export (.txt)`}
+                    </span>
+                    <span className="text-[10px] text-white/30">
+                      Will be preserved as linked evidence and cross-compared against master
+                    </span>
+                  </div>
+                </div>
+
+                {/* Diff Result View */}
+                {diffResult && (
+                  <div className="space-y-4 pt-3">
+                    {/* Summary Bar */}
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                        <div className="text-white/40 text-[10px]">UNCHANGED</div>
+                        <div className="text-base font-bold text-white font-mono">
+                          {diffResult.summary.unchanged}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                        <div className="text-amber-400/80 text-[10px]">MODIFIED</div>
+                        <div className="text-base font-bold font-mono">
+                          {diffResult.summary.modified}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                        <div className="text-rose-400/80 text-[10px]">REMOVED</div>
+                        <div className="text-base font-bold font-mono">
+                          {diffResult.summary.removed}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                        <div className="text-emerald-400/80 text-[10px]">ADDED</div>
+                        <div className="text-base font-bold font-mono">
+                          {diffResult.summary.added}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-amber-400/80 italic">
+                      Notice: Removed messages may indicate editing before upload. Confirm with physical device forensics.
+                    </p>
+
+                    {/* Aligned Messages Table */}
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                      {diffResult.aligned.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-3 rounded-xl border text-xs grid grid-cols-1 md:grid-cols-2 gap-3 ${
+                            item.status === 'removed'
+                              ? 'bg-rose-500/10 border-rose-500/30'
+                              : item.status === 'added'
+                              ? 'bg-emerald-500/10 border-emerald-500/30'
+                              : item.status === 'modified'
+                              ? 'bg-amber-500/10 border-amber-500/30'
+                              : 'bg-black/30 border-white/5'
+                          }`}
+                        >
+                          <div>
+                            <div className="text-[10px] text-white/40 mb-1">
+                              MASTER CHAT ({item.original ? `${item.original.date} ${item.original.time}` : 'NONE'})
+                            </div>
+                            <div className="text-white/80">
+                              {item.original ? item.original.text : <span className="text-white/30 italic">Not present</span>}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-[10px] text-white/40 mb-1">
+                              COUNTERPART ({item.counterpart ? `${item.counterpart.date} ${item.counterpart.time}` : 'NONE'})
+                            </div>
+                            <div>
+                              {item.status === 'modified' && item.diff ? (
+                                <div className="leading-relaxed">
+                                  {item.diff.map((d, dIdx) => (
+                                    <span
+                                      key={dIdx}
+                                      className={
+                                        d.type === 'removed'
+                                          ? 'bg-rose-500/40 text-rose-200 line-through px-0.5 rounded mr-0.5'
+                                          : d.type === 'added'
+                                          ? 'bg-emerald-500/40 text-emerald-200 font-bold px-0.5 rounded mr-0.5'
+                                          : 'text-white/80'
+                                      }
+                                    >
+                                      {d.value}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : item.counterpart ? (
+                                <span className="text-white/80">{item.counterpart.text}</span>
+                              ) : (
+                                <span className="text-rose-400 italic">Omitted in counterpart export</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* ── Verification & Integrity Controls (2-column layout) ─────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -785,6 +1475,47 @@ export default function EvidenceDetail() {
                 </Button>
               </div>
             </form>
+          </div>
+        </Modal>
+
+        {/* ── Legal Request Draft Modal (CAF / CDR) ──────────────────── */}
+        <Modal
+          open={draftModalOpen}
+          onClose={() => setDraftModalOpen(false)}
+          title={draftType === 'cdr' ? 'Formal Notice: Call Detail Records (CDR)' : 'Formal Requisition: Subscriber KYC / CAF'}
+          description="Draft notice under Section 94 BNSS to Telecom Service Provider for electronic evidence corroboration."
+          maxWidth="lg"
+        >
+          <div className="space-y-4 pt-2">
+            {loadingDraft ? (
+              <div className="py-12 text-center text-xs text-white/50 animate-pulse">
+                Generating official requisition draft...
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <pre className="p-4 bg-black/60 rounded-xl border border-white/10 font-mono text-[11px] text-white/80 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto select-all">
+                  {draftContent}
+                </pre>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-[11px] text-amber-400">
+                    Draft notice — to be issued only by the competent authority under due legal process.
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(draftContent)
+                      setCopiedDraft(true)
+                      toast.success('Draft notice copied to clipboard')
+                      setTimeout(() => setCopiedDraft(false), 2000)
+                    }}
+                    className="gap-1.5"
+                  >
+                    {copiedDraft ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedDraft ? 'Copied' : 'Copy Draft'}</span>
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       </div>
