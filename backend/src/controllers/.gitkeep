@@ -1,0 +1,10 @@
+/**
+ * Placeholder controllers directory.
+ *
+ * Future controllers to be added here:
+ *   caseController.js    — CRUD for cases
+ *   evidenceController.js — upload, list, verify-file
+ *   custodyController.js  — list events, verify-chain
+ *   certController.js     — generate Section 63 BSA certificate PDF
+ *   demoController.js     — tamper simulation (DEMO_MODE only)
+ */
