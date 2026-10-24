@@ -343,15 +343,17 @@ export default function CaseDetail() {
         {/* ── Case Header ─────────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono bg-white/5 border border-white/10 text-white/60 mb-2">
-              <span>CASE #{caseData._id.slice(-6).toUpperCase()}</span>
+            <div className="mb-2">
+              <Badge variant="neutral" size="sm">
+                CASE #{caseData._id.slice(-6).toUpperCase()}
+              </Badge>
             </div>
             {/* Title in serif italic */}
-            <h1 className="text-3xl md:text-4xl font-serif italic text-white tracking-tight leading-tight">
-              {caseData.title}
+            <h1 className="text-3xl md:text-4xl font-medium text-white tracking-tight leading-tight">
+              <span className="font-serif-italic font-normal text-gold">{caseData.title}</span>
             </h1>
             {caseData.description && (
-              <p className="text-sm text-white/50 mt-1.5 max-w-3xl leading-relaxed">
+              <p className="text-sm text-white/75 mt-2 max-w-3xl leading-relaxed font-light">
                 {caseData.description}
               </p>
             )}
@@ -363,58 +365,55 @@ export default function CaseDetail() {
               resetUploadModal()
               setModalOpen(true)
             }}
-            className="gap-2 shrink-0 self-start md:self-center"
+            className="shrink-0 self-start md:self-center"
           >
-            <Plus className="w-4 h-4" />
             <span>Add Evidence</span>
           </Button>
         </div>
 
         {/* ── Party Details Card ─────────────────────────────────────── */}
-        <Card className="mb-8 p-6 bg-surface border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-2xl pointer-events-none" />
-
+        <Card className="mb-8 p-6 relative overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10 text-xs">
             {/* Party Name */}
             <div>
-              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
-                <User className="w-3.5 h-3.5 text-emerald-400/80" />
+              <div className="flex items-center gap-1.5 text-white/50 mb-1.5 font-medium">
+                <User className="w-3.5 h-3.5 text-gold" />
                 <span>PARTY / CUSTODIAN</span>
               </div>
-              <div className="text-sm font-semibold text-white truncate">
+              <div className="text-sm font-medium text-white truncate">
                 {caseData.partyName}
               </div>
             </div>
 
             {/* Party Address */}
             <div>
-              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400/80" />
+              <div className="flex items-center gap-1.5 text-white/50 mb-1.5 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-gold" />
                 <span>DEPARTMENT / ADDRESS</span>
               </div>
-              <div className="text-xs text-white/70 line-clamp-2 leading-relaxed">
+              <div className="text-xs text-white/75 line-clamp-2 leading-relaxed font-light">
                 {caseData.partyAddress || 'Not specified'}
               </div>
             </div>
 
             {/* Created IST */}
             <div>
-              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
-                <Clock className="w-3.5 h-3.5 text-emerald-400/80" />
+              <div className="flex items-center gap-1.5 text-white/50 mb-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-gold" />
                 <span>REGISTERED (IST)</span>
               </div>
-              <div className="text-xs font-mono text-white/80">
+              <div className="text-xs font-mono text-white/90">
                 {formatIST(caseData.createdAt)}
               </div>
             </div>
 
             {/* Evidence Count */}
             <div>
-              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
-                <FileCheck2 className="w-3.5 h-3.5 text-emerald-400/80" />
+              <div className="flex items-center gap-1.5 text-white/50 mb-1.5 font-medium">
+                <FileCheck2 className="w-3.5 h-3.5 text-gold" />
                 <span>EVIDENCE FILES</span>
               </div>
-              <div className="text-sm font-mono font-semibold text-emerald-400">
+              <div className="text-sm font-mono font-medium text-gold">
                 {evidenceList.length} {evidenceList.length === 1 ? 'record' : 'records'} locked
               </div>
             </div>
@@ -424,25 +423,26 @@ export default function CaseDetail() {
         {/* ── Evidence Table Section ─────────────────────────────────── */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">
-              Evidence <span className="font-serif italic text-white/50">Register</span>
+            <h2 className="text-lg font-medium text-white">
+              Evidence <span className="font-serif-italic font-normal text-gold">Register</span>
             </h2>
-            <p className="text-xs text-white/40 mt-0.5">
+            <p className="text-xs text-white/60 mt-0.5 font-light">
               Click any item to inspect its custody chain, verify SHA-256 hash, or download the BSA certificate.
             </p>
           </div>
         </div>
 
+
         {evidenceList.length === 0 ? (
           /* Elegant Empty State */
-          <Card className="flex flex-col items-center justify-center py-20 px-6 text-center border-dashed border-white/10 bg-surface/40">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-              <HardDrive className="w-8 h-8 text-white/30" />
+          <Card className="flex flex-col items-center justify-center py-20 px-6 text-center border-dashed border-white/15 bg-surface/40">
+            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-gold">
+              <HardDrive className="w-7 h-7" />
             </div>
-            <h3 className="text-white/80 font-medium text-base">
+            <h3 className="text-white font-medium text-base">
               No evidence yet — add the first file to lock its hash
             </h3>
-            <p className="text-white/40 text-xs mt-1.5 max-w-md leading-relaxed">
+            <p className="text-white/60 text-xs mt-1.5 max-w-md leading-relaxed font-light">
               Upload electronic documents, audio/video recordings, disk dumps, or mobile exports to compute irreversible SHA-256 checksums and initiate the chain of custody.
             </p>
             <Button
@@ -451,20 +451,19 @@ export default function CaseDetail() {
                 resetUploadModal()
                 setModalOpen(true)
               }}
-              className="mt-6 gap-1.5"
+              className="mt-6"
             >
-              <Plus className="w-4 h-4" />
               <span>Add First Evidence</span>
             </Button>
           </Card>
         ) : (
           /* Evidence Table */
-          <Card className="overflow-hidden bg-surface border-white/10">
+          <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 {/* Table Header */}
                 <thead>
-                  <tr className="border-b border-white/10 text-[11px] font-mono uppercase text-white/40 bg-black/20">
+                  <tr className="border-b border-white/10 text-[11px] font-mono uppercase text-white/50 bg-black/30">
                     <th className="py-3.5 px-5">Filename</th>
                     <th className="py-3.5 px-4">SHA-256 Checksum</th>
                     <th className="py-3.5 px-4">Uploaded (IST)</th>
@@ -485,14 +484,14 @@ export default function CaseDetail() {
                       {/* Filename & size */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gold shrink-0">
                             {getDeviceIcon(item.deviceType)}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium text-white group-hover:text-emerald-400 transition-colors truncate max-w-xs md:max-w-sm">
+                            <div className="font-medium text-white group-hover:text-gold transition-colors truncate max-w-xs md:max-w-sm">
                               {item.filename}
                             </div>
-                            <div className="text-[11px] text-white/40 flex items-center gap-2 mt-0.5">
+                            <div className="text-[11px] text-white/50 flex items-center gap-2 mt-0.5 font-light">
                               <span>{formatBytes(item.sizeBytes)}</span>
                               <span>•</span>
                               <span>{item.deviceType}</span>
@@ -513,26 +512,26 @@ export default function CaseDetail() {
                       </td>
 
                       {/* Uploaded IST Time */}
-                      <td className="py-4 px-4 text-white/70 font-mono text-[11px] whitespace-nowrap">
+                      <td className="py-4 px-4 text-white/75 font-mono text-[11px] whitespace-nowrap">
                         {formatIST(item.createdAt)}
                       </td>
 
                       {/* Uploaded By */}
-                      <td className="py-4 px-4 text-white/80 font-medium whitespace-nowrap">
+                      <td className="py-4 px-4 text-white/90 font-medium whitespace-nowrap">
                         {item.uploadedBy || 'Custodian'}
                       </td>
 
                       {/* Locked Badge */}
                       <td className="py-4 px-4 text-center whitespace-nowrap">
                         <Badge variant="verified" size="sm" className="font-mono gap-1">
-                          <Lock className="w-3 h-3" />
+                          <Lock className="w-3 h-3 text-[#3FA27A]" />
                           <span>Locked</span>
                         </Badge>
                       </td>
 
                       {/* Row Action Link */}
                       <td className="py-4 px-4 text-right whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400/80 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gold group-hover:translate-x-0.5 transition-all">
                           Inspect <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </td>
@@ -557,22 +556,22 @@ export default function CaseDetail() {
           {uploadSuccess ? (
             /* Success Card: "Hash locked", IST time, full hash with copy */
             <div className="space-y-5 pt-3">
-              <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+              <div className="p-5 rounded-2xl bg-[#EAF5EF] border border-[#3FA27A]/30 text-ink">
                 <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#3FA27A]/15 border border-[#3FA27A]/30 flex items-center justify-center text-[#2E7D5B] shrink-0">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-base font-bold text-white">Hash locked & sealed</h4>
-                      <Badge variant="verified" size="sm" className="font-mono">
+                      <h4 className="text-base font-semibold text-ink">Hash locked & sealed</h4>
+                      <Badge variant="verified" size="sm">
                         BSA COMPLIANT
                       </Badge>
                     </div>
-                    <p className="text-xs text-white/70">
+                    <p className="text-xs text-ink/75">
                       The file fingerprint has been irreversibly stamped into the genesis custody event.
                     </p>
-                    <div className="flex items-center gap-2 text-xs font-mono text-emerald-400/90 pt-1">
+                    <div className="flex items-center gap-2 text-xs font-mono text-[#2E7D5B] font-medium pt-1">
                       <Clock className="w-3.5 h-3.5" />
                       <span>Locked at IST: {uploadSuccess.lockedAtIST}</span>
                     </div>
@@ -580,44 +579,42 @@ export default function CaseDetail() {
                 </div>
 
                 {/* Full SHA-256 Checksum with Copy */}
-                <div className="mt-4 pt-3 border-t border-emerald-500/20">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400/80 mb-1.5">
+                <div className="mt-4 pt-3 border-t border-[#3FA27A]/20">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-ink/70 mb-1.5">
                     <span>SEALED SHA-256 CHECKSUM</span>
                     <button
                       type="button"
                       onClick={() => copySuccessHash(uploadSuccess.evidence.sha256)}
-                      className="inline-flex items-center gap-1 text-white hover:text-emerald-300 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 text-ink hover:text-[#2E7D5B] transition-colors cursor-pointer font-medium"
                     >
-                      {copiedHash ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedHash ? <Check className="w-3 h-3 text-[#3FA27A]" /> : <Copy className="w-3 h-3" />}
                       <span>{copiedHash ? 'Copied' : 'Copy Full Hash'}</span>
                     </button>
                   </div>
-                  <div className="p-3 bg-black/60 rounded-xl font-mono text-xs text-emerald-400 break-all select-all border border-emerald-500/20">
+                  <div className="p-3 bg-ink text-cream rounded-xl font-mono text-xs break-all select-all border border-ink/20 shadow-inner">
                     {uploadSuccess.evidence.sha256}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={() => {
                     resetUploadModal()
                   }}
+                  className="px-5 py-2 rounded-full text-xs font-medium text-ink/70 hover:text-ink hover:underline transition-colors"
                 >
                   Add Another File
-                </Button>
+                </button>
                 <Button
                   type="button"
                   onClick={() => {
                     setModalOpen(false)
                     navigate(`/evidence/${uploadSuccess.evidence._id}`)
                   }}
-                  className="gap-2"
                 >
                   <span>Open Evidence Record</span>
-                  <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -625,20 +622,20 @@ export default function CaseDetail() {
             <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
               {/* 409 Error Card: Red card with both hashes */}
               {mismatchError && (
-                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-2">
-                  <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
+                <div className="p-4 rounded-xl bg-[#FDECEC] border border-[#E5484D]/40 text-ink space-y-2">
+                  <div className="flex items-center gap-2 text-[#C22830] font-semibold text-sm">
                     <XCircle className="w-4 h-4 shrink-0" />
                     <span>Upload Rejected: Hash Mismatch (409 Conflict)</span>
                   </div>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-ink/75">
                     The SHA-256 calculated by your browser differs from the hash calculated on the server stream. The file has been discarded to protect chain integrity.
                   </p>
-                  <div className="bg-black/40 p-2.5 rounded-lg border border-rose-500/20 font-mono text-[11px] space-y-1">
-                    <div className="text-white/60">
-                      Client Hash: <span className="text-rose-300 break-all">{mismatchError.clientSha256}</span>
+                  <div className="bg-white/90 p-2.5 rounded-lg border border-ink/10 font-mono text-[11px] space-y-1">
+                    <div className="text-ink/70">
+                      Client Hash: <span className="text-[#C22830] break-all font-medium">{mismatchError.clientSha256}</span>
                     </div>
-                    <div className="text-white/60">
-                      Server Hash: <span className="text-rose-300 break-all">{mismatchError.serverSha256}</span>
+                    <div className="text-ink/70">
+                      Server Hash: <span className="text-[#C22830] break-all font-medium">{mismatchError.serverSha256}</span>
                     </div>
                   </div>
                 </div>
@@ -646,8 +643,8 @@ export default function CaseDetail() {
 
               {/* Drag-and-drop zone with scan animation */}
               <div>
-                <label className="block text-xs font-medium text-white/70 mb-1.5">
-                  Select or Drop Evidence File <span className="text-rose-400">*</span>
+                <label className="block text-xs font-medium text-ink mb-1.5">
+                  Select or Drop Evidence File <span className="text-status-tampered">*</span>
                 </label>
                 <div
                   onDragOver={handleDragOver}
@@ -655,15 +652,15 @@ export default function CaseDetail() {
                   onDrop={handleDrop}
                   className={`relative border-2 border-dashed rounded-xl p-5 text-center transition-all overflow-hidden ${
                     isDragging
-                      ? 'border-emerald-400 bg-emerald-500/10 scale-[1.01]'
+                      ? 'border-gold bg-gold/10 scale-[1.01]'
                       : selectedFile
-                      ? 'border-emerald-500/40 bg-emerald-500/5'
-                      : 'border-white/10 hover:border-white/20 bg-surface/50'
+                      ? 'border-[#3FA27A]/40 bg-[#3FA27A]/5'
+                      : 'border-ink/20 hover:border-ink/40 bg-white/40'
                   }`}
                 >
                   {/* Laser scan animation when computing hash */}
                   {computingHash && (
-                    <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse top-0 bottom-0 m-auto shadow-[0_0_12px_#10B981]" />
+                    <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-gold to-transparent animate-pulse top-0 bottom-0 m-auto shadow-[0_0_12px_#C9A35B]" />
                   )}
 
                   <input
@@ -679,50 +676,50 @@ export default function CaseDetail() {
 
                   {selectedFile ? (
                     <div className="space-y-2.5">
-                      <div className="flex items-center justify-center gap-2 text-emerald-400">
-                        <CheckCircle2 className="w-5 h-5 shrink-0" />
-                        <span className="font-medium text-sm text-white truncate max-w-xs">
+                      <div className="flex items-center justify-center gap-2 text-ink">
+                        <CheckCircle2 className="w-5 h-5 text-[#3FA27A] shrink-0" />
+                        <span className="font-semibold text-sm truncate max-w-xs">
                           {selectedFile.name}
                         </span>
                       </div>
-                      <div className="text-xs text-white/40">
+                      <div className="text-xs text-ink/60">
                         {formatBytes(selectedFile.size)} • {selectedFile.type || 'Binary data'}
                       </div>
 
                       {/* Live typing-in SHA-256 preview */}
-                      <div className="pt-2 text-left bg-black/50 rounded-lg p-3 border border-white/10 relative">
-                        <div className="text-[10px] text-emerald-400 font-mono flex items-center justify-between mb-1.5">
+                      <div className="pt-2 text-left bg-ink text-cream rounded-xl p-3 border border-ink/20 relative shadow-inner">
+                        <div className="text-[10px] text-gold font-mono flex items-center justify-between mb-1.5">
                           <span className="flex items-center gap-1.5">
-                            <Zap className="w-3 h-3 animate-pulse" />
+                            <Zap className="w-3 h-3 text-gold animate-pulse" />
                             <span>BROWSER SHA-256 (CRYPTO.SUBTLE):</span>
                           </span>
                           {computingHash ? (
-                            <span className="text-emerald-400 animate-pulse font-mono text-[10px]">
+                            <span className="text-gold animate-pulse font-mono text-[10px]">
                               Scanning byte stream...
                             </span>
                           ) : (
-                            <span className="text-emerald-400 text-[10px] font-mono">100% computed</span>
+                            <span className="text-[#3FA27A] text-[10px] font-mono">100% computed</span>
                           )}
                         </div>
-                        <div className="font-mono text-xs text-emerald-300 break-all select-all tracking-wider min-h-[2.5rem] flex items-center">
+                        <div className="font-mono text-xs text-white/95 break-all select-all tracking-wider min-h-[2.5rem] flex items-center">
                           {displayedHash || (
-                            <span className="text-white/20 italic text-xs">Computing hash...</span>
+                            <span className="text-white/30 italic text-xs">Computing hash...</span>
                           )}
                           {computingHash && (
-                            <span className="inline-block w-1.5 h-3.5 bg-emerald-400 ml-1 animate-ping" />
+                            <span className="inline-block w-1.5 h-3.5 bg-gold ml-1 animate-ping" />
                           )}
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2 py-3">
-                      <div className="w-12 h-12 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                      <div className="w-12 h-12 mx-auto rounded-full bg-ink/5 border border-ink/10 flex items-center justify-center text-ink/50">
                         <Upload className="w-6 h-6" />
                       </div>
-                      <p className="text-xs text-white/80 font-medium">
+                      <p className="text-xs text-ink font-semibold">
                         Drag and drop evidence file here, or click to browse
                       </p>
-                      <p className="text-[11px] text-white/30">
+                      <p className="text-[11px] text-ink/60">
                         Supported: WhatsApp exports (.txt), photos, call audio, CCTV video, forensic disk images (up to 50MB)
                       </p>
                     </div>
@@ -733,6 +730,7 @@ export default function CaseDetail() {
               {/* Device Metadata */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Select
+                  variant="light"
                   label="Device Type"
                   value={form.deviceType}
                   onChange={(e) =>
@@ -748,6 +746,7 @@ export default function CaseDetail() {
                 />
 
                 <Input
+                  variant="light"
                   label="Make / Model"
                   placeholder="e.g. Samsung Galaxy A52 / Dell Latitude"
                   value={form.makeModel}
@@ -757,6 +756,7 @@ export default function CaseDetail() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Input
+                  variant="light"
                   label="Serial Number"
                   placeholder="e.g. SN-R5CX501ABCD"
                   value={form.serialNo}
@@ -765,18 +765,20 @@ export default function CaseDetail() {
 
                 <div>
                   <Input
+                    variant="light"
                     label="IMEI / MAC / Cloud ID"
                     placeholder="e.g. 355123456789012"
                     value={form.deviceId}
                     onChange={(e) => setForm({ ...form, deviceId: e.target.value })}
                   />
-                  <p className="text-[10px] text-white/30 mt-1">
+                  <p className="text-[10px] text-ink/60 mt-1">
                     Helper: Dial *#06# on mobile devices to display IMEI
                   </p>
                 </div>
               </div>
 
               <Input
+                variant="light"
                 label="Custodian / Uploaded By"
                 placeholder="e.g. Inspector R. Verma / Meena Kumari"
                 value={form.uploadedBy}
@@ -785,7 +787,7 @@ export default function CaseDetail() {
               />
 
               <div>
-                <label className="block text-xs font-medium text-white/70 mb-1.5">
+                <label className="block text-xs font-medium text-ink mb-1.5">
                   Acquisition & Forensic Notes
                 </label>
                 <textarea
@@ -793,42 +795,40 @@ export default function CaseDetail() {
                   placeholder="Conditions of seizure, physical state, acquisition tool..."
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-surface border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none"
+                  className="w-full px-3.5 py-2 bg-white/80 border border-ink/20 rounded-xl text-sm text-ink placeholder-ink/40 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors resize-none"
                 />
               </div>
 
               {/* Required Statutory Declaration Checkbox */}
               <div className="pt-2">
-                <label className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 cursor-pointer group hover:bg-amber-500/10 transition-colors">
+                <label className="flex items-start gap-3 p-3 rounded-xl bg-[#FEF8EC] border border-[#D9A441]/40 cursor-pointer group transition-colors">
                   <input
                     type="checkbox"
                     checked={declarationAccepted}
                     onChange={(e) => setDeclarationAccepted(e.target.checked)}
-                    className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 bg-surface"
+                    className="mt-0.5 rounded border-ink/30 text-ink focus:ring-gold focus:ring-offset-0 bg-white"
                     required
                   />
-                  <span className="text-xs text-white/80 leading-relaxed select-none">
-                    <span className="font-semibold text-amber-400">Statutory Declaration:</span> I declare this evidence is genuine. Fabricating false evidence is a punishable offence under Bharatiya Nyaya Sanhita (BNS).
+                  <span className="text-xs text-ink/85 leading-relaxed select-none">
+                    <span className="font-semibold text-[#A8741A]">Statutory Declaration:</span> I declare this evidence is genuine. Fabricating false evidence is a punishable offence under Bharatiya Nyaya Sanhita (BNS).
                   </span>
                 </label>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-                <Button
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-ink/10">
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={() => setModalOpen(false)}
                   disabled={uploading}
+                  className="px-5 py-2 rounded-full text-xs font-medium text-ink/70 hover:text-ink hover:underline transition-colors"
                 >
                   Cancel
-                </Button>
+                </button>
                 <Button
                   type="submit"
                   disabled={uploading || !selectedFile || computingHash || !declarationAccepted}
-                  className="gap-2"
                 >
-                  <Lock className="w-4 h-4" />
                   <span>{uploading ? 'Locking Hash & Securing...' : 'Secure & Lock Hash'}</span>
                 </Button>
               </div>

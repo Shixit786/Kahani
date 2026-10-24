@@ -9,82 +9,86 @@
 
   html {
     scroll-behavior: smooth;
+    background-color: #3A0A10;
   }
 
   body {
-    background-color: #0B0B0F;
-    color: #F1F1F3;
-    font-family: 'Inter', Arial, sans-serif;
+    background-color: #3A0A10;
+    color: #FFFFFF;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Fixed decorative geometric SVG pattern behind all content */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(42, 7, 11, 0.65) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='1'%3E%3Ccircle cx='400' cy='400' r='180'/%3E%3Ccircle cx='400' cy='400' r='360'/%3E%3Ccircle cx='400' cy='400' r='540'/%3E%3Ccircle cx='100' cy='100' r='240'/%3E%3Ccircle cx='700' cy='700' r='240'/%3E%3Cline x1='0' y1='0' x2='800' y2='800'/%3E%3Cline x1='800' y1='0' x2='0' y2='800'/%3E%3Cline x1='-200' y1='400' x2='1000' y2='400'/%3E%3Cline x1='400' y1='-200' x2='400' y2='1000'/%3E%3Cline x1='-200' y1='100' x2='900' y2='700'/%3E%3Cline x1='-100' y1='700' x2='900' y2='100'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover, 800px 800px;
+    background-position: center, center;
+    background-repeat: no-repeat, repeat;
+    opacity: 0.95;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
   }
 
   ::selection {
-    background: rgba(16, 185, 129, 0.3);
-    color: #F1F1F3;
+    background: rgba(201, 163, 91, 0.35);
+    color: #FFFFFF;
   }
 
-  /* Scrollbar */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0B0B0F;
+    background: #2A070B;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(201, 163, 91, 0.4);
   }
 }
 
 @layer components {
+  /* Italic serif font for accent words */
   .font-serif-italic {
-    font-family: 'Instrument Serif', Georgia, serif;
+    font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
+    font-weight: 500;
   }
 
-  .font-mono {
-    font-family: 'JetBrains Mono', monospace;
+  /* Card Dark: surface on maroon */
+  .card-dark {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
   }
 
-  /* Card base */
-  .card {
-    background: #14141A;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-  }
-
-  /* Glow effects */
-  .glow-emerald {
-    box-shadow: 0 0 24px rgba(16, 185, 129, 0.15), 0 1px 3px rgba(0,0,0,0.5);
-  }
-  .glow-red {
-    box-shadow: 0 0 24px rgba(239, 68, 68, 0.15), 0 1px 3px rgba(0,0,0,0.5);
-  }
-  .glow-amber {
-    box-shadow: 0 0 24px rgba(245, 158, 11, 0.15), 0 1px 3px rgba(0,0,0,0.5);
-  }
-
-  /* Gradient text */
-  .gradient-text {
-    background: linear-gradient(135deg, #10B981, #34d399);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-}
-
-@layer utilities {
-  .text-muted {
-    color: #6B6B7B;
-  }
-  .text-secondary {
-    color: #9B9BAB;
-  }
-  .border-subtle {
-    border-color: rgba(255, 255, 255, 0.08);
+  /* Card Light: cream bg with ink text */
+  .card-light {
+    background-color: #EFE7DC;
+    color: #3A0A10;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px -5px rgba(42, 7, 11, 0.3);
   }
 }

@@ -1,35 +1,85 @@
-type BadgeVariant = 'verified' | 'tampered' | 'neutral' | 'warning' | 'party' | 'lawyer' | 'expert' | 'court'
+type BadgeVariant =
+  | 'verified'
+  | 'tampered'
+  | 'neutral'
+  | 'warning'
+  | 'party'
+  | 'lawyer'
+  | 'expert'
+  | 'court'
 
 interface BadgeProps {
   variant: BadgeVariant
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg'
+  dot?: boolean
   className?: string
 }
 
-const styles: Record<BadgeVariant, string> = {
-  verified: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  tampered: 'bg-red-500/10 text-red-400 border-red-500/20',
-  neutral: 'bg-white/5 text-white/50 border-white/10',
-  warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  party: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-  lawyer: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-  expert: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  court: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+const variantConfig: Record<
+  BadgeVariant,
+  { dotColor: string; textColor: string }
+> = {
+  verified: {
+    dotColor: 'bg-[#3FA27A]',
+    textColor: 'text-[#2E7D5B]',
+  },
+  tampered: {
+    dotColor: 'bg-[#E5484D]',
+    textColor: 'text-[#C22830]',
+  },
+  warning: {
+    dotColor: 'bg-[#D9A441]',
+    textColor: 'text-[#A8741A]',
+  },
+  neutral: {
+    dotColor: 'bg-ink/30',
+    textColor: 'text-ink/75',
+  },
+  party: {
+    dotColor: 'bg-sky-600',
+    textColor: 'text-sky-900',
+  },
+  lawyer: {
+    dotColor: 'bg-purple-600',
+    textColor: 'text-purple-900',
+  },
+  expert: {
+    dotColor: 'bg-amber-600',
+    textColor: 'text-amber-900',
+  },
+  court: {
+    dotColor: 'bg-rose-600',
+    textColor: 'text-rose-900',
+  },
 }
 
 const sizeStyles = {
-  sm: 'px-2 py-0.5 text-[11px]',
-  md: 'px-2.5 py-0.5 text-xs',
-  lg: 'px-3 py-1 text-sm',
+  sm: 'px-2.5 py-0.5 text-[11px]',
+  md: 'px-3 py-0.5 text-xs',
+  lg: 'px-3.5 py-1 text-sm',
 }
 
-export default function Badge({ variant, children, size = 'md', className = '' }: BadgeProps) {
+export default function Badge({
+  variant,
+  children,
+  size = 'md',
+  dot = true,
+  className = '',
+}: BadgeProps) {
+  const config = variantConfig[variant] ?? variantConfig.neutral
+
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md font-medium border ${styles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full font-medium bg-cream border border-cream-deep shadow-sm tracking-wide ${config.textColor} ${sizeStyles[size]} ${className}`}
     >
-      {children}
+      {dot && (
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${config.dotColor}`}
+          aria-hidden="true"
+        />
+      )}
+      <span>{children}</span>
     </span>
   )
 }
@@ -44,3 +94,4 @@ export function roleBadgeVariant(role: string): BadgeVariant {
   }
   return map[role] ?? 'neutral'
 }
+

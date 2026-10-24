@@ -1,84 +1,52 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Lock, Link2, FileText, Shield } from 'lucide-react'
+import { Lock, Link2, FileText, Shield, CheckCircle2, QrCode } from 'lucide-react'
 import Button from '../components/Button'
-
-const features = [
-  {
-    icon: Lock,
-    title: 'Hash Lock',
-    accent: 'sealed at upload',
-    description:
-      'Every file is SHA-256 hashed the moment it arrives on the server. The fingerprint is locked forever — any byte-level change is instantly detected.',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
-  },
-  {
-    icon: Link2,
-    title: 'Custody Chain',
-    accent: 'tamper-evident',
-    description:
-      'Each handover appends a cryptographically linked event. The hash of every entry seals the next, creating an unbreakable audit trail.',
-    color: 'text-sky-400',
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-500/20',
-  },
-  {
-    icon: FileText,
-    title: 'Court Certificate',
-    accent: 'legally compliant',
-    description:
-      'Generate a Section 63(4)(c) BSA 2023 certificate PDF with QR code, device details, hash value, and the full chain of custody — ready for court.',
-    color: 'text-violet-400',
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-500/20',
-  },
-]
+import Card from '../components/Card'
+import Badge from '../components/Badge'
 
 export default function Home() {
   return (
-    <div className="min-h-screen pt-14">
+    <div className="min-h-screen pt-16">
       {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center min-h-[88vh] px-6 text-center overflow-hidden">
-        {/* Background radial glow */}
+      <section className="relative flex flex-col items-center justify-center min-h-[85vh] px-6 text-center overflow-hidden">
+        {/* Soft vignette and warm gold/maroon ambient accents */}
         <div
           className="absolute inset-0 pointer-events-none"
           aria-hidden
           style={{
             background:
-              'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(16,185,129,0.07) 0%, transparent 70%), ' +
-              'radial-gradient(ellipse 40% 30% at 70% 60%, rgba(99,102,241,0.05) 0%, transparent 60%)',
+              'radial-gradient(ellipse 60% 50% at 50% 35%, rgba(201,163,91,0.06) 0%, transparent 70%), ' +
+              'radial-gradient(ellipse 50% 40% at 50% 80%, rgba(42,7,11,0.8) 0%, transparent 80%)',
           }}
         />
 
-        {/* Top badge */}
-        <div className="relative mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-          <Shield className="w-3.5 h-3.5" />
-          Cryptographic Evidence Integrity Platform
+        {/* Top badge - cream pill with verified dot */}
+        <div className="relative mb-8">
+          <Badge variant="verified" size="md">
+            Section 63(4)(c) BSA 2023 Compliant
+          </Badge>
         </div>
 
-        {/* Headline */}
-        <h1 className="relative max-w-3xl text-5xl sm:text-6xl font-semibold leading-[1.12] tracking-tight text-white mb-6">
-          Evidence that{' '}
-          <span className="font-serif-italic text-emerald-400">stays true</span>
+        {/* Headline: large Montserrat 500 with Playfair italic accents */}
+        <h1 className="relative max-w-4xl text-4xl sm:text-6xl md:text-7xl font-medium leading-[1.15] tracking-tight text-white mb-6">
+          <span className="font-serif-italic font-normal text-gold">Evidence</span>{' '}
+          That Stays True,
           <br />
-          from seizure to{' '}
-          <span className="font-serif-italic text-white/70">court</span>
+          From Seizure to{' '}
+          <span className="font-serif-italic font-normal text-cream">Verdict</span>
         </h1>
 
-        {/* Subtitle */}
-        <p className="relative max-w-xl text-lg text-white/50 mb-10 leading-relaxed">
-          SHA-256 sealed, tamper-evident chain of custody, and a{' '}
-          <span className="text-white/70">Section 63 BSA</span> certificate PDF —
-          built for Indian legal proceedings.
+        {/* Subtitle: Montserrat 300-400, line-height 1.6 */}
+        <p className="relative max-w-2xl text-base sm:text-lg text-white/75 mb-10 leading-relaxed font-light">
+          SHA-256 cryptographic locking, immutable tamper-evident chain of custody,
+          and automated Indian court certificates for forensic electronic evidence.
         </p>
 
         {/* CTAs */}
-        <div className="relative flex items-center gap-3">
+        <div className="relative flex flex-wrap items-center justify-center gap-4">
           <Link to="/cases">
-            <Button size="lg" className="gap-2">
-              Open Cases
-              <ArrowRight className="w-4 h-4" />
+            <Button size="lg">
+              Explore Cases
             </Button>
           </Link>
           <a
@@ -86,65 +54,153 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button size="lg" variant="ghost">
-              View Source
+            <Button size="lg" variant="secondary">
+              View Legal Specs
             </Button>
           </a>
         </div>
 
-        {/* Scroll hint */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
-          <div className="w-px h-8 bg-gradient-to-b from-transparent to-white/60" />
+        {/* Floating preview showcase: an elegant rotated cream card */}
+        <div className="relative mt-14 max-w-2xl w-full">
+          <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+            <Card variant="light" className="p-6 text-left shadow-2xl border border-cream-deep">
+              <div className="flex items-center justify-between pb-4 border-b border-ink/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-ink text-cream flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-gold" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold tracking-wider uppercase text-ink/60">
+                      Bharatiya Sakshya Adhiniyam, 2023
+                    </div>
+                    <div className="text-sm font-semibold text-ink">
+                      Certificate Under Section 63(4)(c)
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="verified" size="sm">
+                  Chain Intact
+                </Badge>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-2.5 rounded-xl bg-white/70 border border-ink/10">
+                  <span className="text-ink/60 block">Hash Lock</span>
+                  <span className="font-mono font-medium text-ink">SHA-256 Locked</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/70 border border-ink/10">
+                  <span className="text-ink/60 block">Chain Events</span>
+                  <span className="font-medium text-ink">Cryptographically Sealed</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 p-2.5 rounded-xl bg-white/70 border border-ink/10 flex items-center justify-between">
+                  <div>
+                    <span className="text-ink/60 block">Court Seal</span>
+                    <span className="font-medium text-ink">Section 63 Ready</span>
+                  </div>
+                  <QrCode className="w-5 h-5 text-ink/70" />
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Scroll indicator line */}
+        <div className="mt-12 flex flex-col items-center gap-2 opacity-40">
+          <div className="w-px h-10 bg-gradient-to-b from-transparent via-gold to-transparent" />
         </div>
       </section>
 
       {/* ── Feature cards ─────────────────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-6 pb-24">
-        <div className="grid md:grid-cols-3 gap-5">
-          {features.map((f) => (
-            <div
-              key={f.title}
-              className="card p-6 hover:border-white/[0.14] hover:translate-y-[-2px] transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.5)] group"
-            >
-              {/* Icon */}
-              <div
-                className={`w-10 h-10 rounded-xl ${f.bg} border ${f.border} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-200`}
-              >
-                <f.icon className={`w-5 h-5 ${f.color}`} />
-              </div>
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="text-center mb-12">
+          <span className="text-xs uppercase tracking-widest text-gold font-medium">
+            Forensic Assurance
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-medium text-white mt-2">
+            Engineered for <span className="font-serif-italic text-cream">Judicial Scrutiny</span>
+          </h2>
+        </div>
 
-              {/* Title */}
-              <h3 className="text-base font-semibold text-white mb-1">
-                {f.title}{' '}
-                <span className={`font-serif-italic font-normal ${f.color}`}>
-                  — {f.accent}
-                </span>
-              </h3>
-
-              {/* Description */}
-              <p className="text-sm text-white/45 leading-relaxed">
-                {f.description}
-              </p>
+        <div className="grid md:grid-cols-3 gap-6">
+          <Card className="p-8 relative overflow-hidden group hover:border-gold/30 transition-all duration-300">
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform text-gold">
+              <Lock className="w-5 h-5" />
             </div>
-          ))}
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Hash Lock{' '}
+              <span className="font-serif-italic font-normal text-gold block sm:inline">
+                — Seizure Sealing
+              </span>
+            </h3>
+            <p className="text-sm text-white/75 leading-relaxed font-light">
+              Files are streamed through SHA-256 hashing at ingestion. Any single byte tampering breaks the fingerprint immediately.
+            </p>
+          </Card>
+
+          <Card className="p-8 relative overflow-hidden group hover:border-gold/30 transition-all duration-300">
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform text-cream">
+              <Link2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Custody Chain{' '}
+              <span className="font-serif-italic font-normal text-cream block sm:inline">
+                — Block Linked
+              </span>
+            </h3>
+            <p className="text-sm text-white/75 leading-relaxed font-light">
+              Every custody transfer cryptographically references the previous entry's hash. Retroactive alteration invalidates all successor records.
+            </p>
+          </Card>
+
+          <Card className="p-8 relative overflow-hidden group hover:border-gold/30 transition-all duration-300">
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform text-gold">
+              <FileText className="w-5 h-5" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Court Certificate{' '}
+              <span className="font-serif-italic font-normal text-gold block sm:inline">
+                — BSA Section 63
+              </span>
+            </h3>
+            <p className="text-sm text-white/75 leading-relaxed font-light">
+              Generates court-admissible PDFs with Part A party declaration, Part B expert certification, and verification QR code.
+            </p>
+          </Card>
         </div>
 
         {/* Bottom stat strip */}
-        <div className="mt-10 card p-5 flex flex-col sm:flex-row items-center justify-center gap-8 text-center">
-          {[
-            { label: 'Hash Algorithm', value: 'SHA-256' },
-            { label: 'Legal Compliance', value: 'BSA 2023 §63' },
-            { label: 'Chain Integrity', value: 'Block-linked' },
-          ].map((s) => (
-            <div key={s.label}>
-              <div className="text-xl font-semibold text-white font-mono">
-                {s.value}
+        <div className="mt-12">
+          <Card className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center divide-y sm:divide-y-0 sm:divide-x divide-white/10">
+              <div className="pt-3 sm:pt-0">
+                <div className="text-2xl font-medium text-white font-mono">
+                  SHA-256
+                </div>
+                <div className="text-xs text-white/50 mt-1 uppercase tracking-wider font-light">
+                  Primary Hashing Standard
+                </div>
               </div>
-              <div className="text-xs text-white/35 mt-0.5">{s.label}</div>
+              <div className="pt-3 sm:pt-0">
+                <div className="text-2xl font-medium text-gold font-mono">
+                  BSA 2023 §63(4)(c)
+                </div>
+                <div className="text-xs text-white/50 mt-1 uppercase tracking-wider font-light">
+                  Indian Evidence Framework
+                </div>
+              </div>
+              <div className="pt-3 sm:pt-0">
+                <div className="text-2xl font-medium text-white font-mono">
+                  RFC 3161
+                </div>
+                <div className="text-xs text-white/50 mt-1 uppercase tracking-wider font-light">
+                  FreeTSA Timestamped
+                </div>
+              </div>
             </div>
-          ))}
+          </Card>
         </div>
       </section>
     </div>
   )
 }
+

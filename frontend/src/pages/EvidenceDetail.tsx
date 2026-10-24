@@ -85,14 +85,16 @@ function getDeviceIcon(type: string) {
   }
 }
 
-function getRoleBadgeVariant(role: string): 'verified' | 'tampered' | 'warning' | 'neutral' {
+function getRoleBadgeVariant(role: string): 'verified' | 'tampered' | 'warning' | 'neutral' | 'party' | 'lawyer' | 'expert' | 'court' {
   switch (role) {
     case 'Court':
-      return 'verified'
+      return 'court'
     case 'Expert':
-      return 'warning'
+      return 'expert'
     case 'Lawyer':
-      return 'neutral'
+      return 'lawyer'
+    case 'Party':
+      return 'party'
     default:
       return 'neutral'
   }
@@ -102,12 +104,12 @@ function getRoleBadgeVariant(role: string): 'verified' | 'tampered' | 'warning' 
 function DiffHashDisplay({ original, current }: { original: string; current: string }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs pt-2">
-      <div className="bg-black/50 p-3 rounded-xl border border-white/10 space-y-1">
-        <div className="text-[10px] text-white/40 uppercase font-semibold">Original Stored Hash</div>
-        <div className="text-emerald-400 break-all select-all leading-relaxed">{original}</div>
+      <div className="bg-ink p-3 rounded-xl border border-ink/20 space-y-1">
+        <div className="text-[10px] text-cream/60 uppercase font-semibold">Original Stored Hash</div>
+        <div className="text-gold break-all select-all leading-relaxed">{original}</div>
       </div>
-      <div className="bg-black/50 p-3 rounded-xl border border-rose-500/30 space-y-1">
-        <div className="text-[10px] text-rose-400 uppercase font-semibold">
+      <div className="bg-ink p-3 rounded-xl border border-status-tampered/40 space-y-1">
+        <div className="text-[10px] text-status-tampered uppercase font-semibold">
           Computed File Hash (Mismatches Highlighted)
         </div>
         <div className="break-all select-all leading-relaxed">
@@ -118,8 +120,8 @@ function DiffHashDisplay({ original, current }: { original: string; current: str
                 key={index}
                 className={
                   isDiff
-                    ? 'bg-rose-500/40 text-rose-200 font-bold px-0.5 rounded shadow-sm'
-                    : 'text-white/80'
+                    ? 'bg-status-tampered text-white font-bold px-0.5 rounded shadow-sm'
+                    : 'text-cream/80'
                 }
               >
                 {char}
@@ -131,6 +133,7 @@ function DiffHashDisplay({ original, current }: { original: string; current: str
     </div>
   )
 }
+
 
 export default function EvidenceDetail() {
   const { id } = useParams<{ id: string }>()
@@ -448,7 +451,7 @@ export default function EvidenceDetail() {
           {/* Public Verification Link (Phase 7) */}
           <Link
             to={`/verify/${evidence._id}`}
-            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-gold hover:text-white font-medium transition-colors"
           >
             <span>Public Verification Portal</span>
             <ExternalLink className="w-3.5 h-3.5" />
@@ -456,78 +459,65 @@ export default function EvidenceDetail() {
         </div>
 
         {/* ── Info Card (File, Size, Hash, Device Details, Notes, Uploader) ── */}
-        <Card className="mb-8 p-6 md:p-8 bg-surface border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/[0.04] rounded-full blur-3xl pointer-events-none" />
-
+        <Card className="mb-8 p-6 md:p-8 relative overflow-hidden">
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 relative z-10">
             <div className="space-y-4 max-w-3xl">
               <div className="flex flex-wrap items-center gap-2.5">
-                <Badge variant="verified" size="sm" className="font-mono gap-1">
-                  <Lock className="w-3 h-3" />
-                  <span>HASH LOCKED</span>
+                <Badge variant="verified" size="sm" className="font-mono">
+                  HASH LOCKED
                 </Badge>
 
-                {/* Phase 6: Trust Badge near title */}
-                <div
-                  className="group relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-help transition-all"
-                  style={{
-                    backgroundColor:
+                {/* Phase 6: Trust Badge — Cream pill with colored dot + colored text */}
+                <div className="group relative">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-medium bg-cream border border-cream-deep shadow-sm cursor-help ${
                       currentTrust === 'HIGH'
-                        ? 'rgba(16, 185, 129, 0.15)'
+                        ? 'text-[#2E7D5B]'
                         : currentTrust === 'MEDIUM'
-                        ? 'rgba(245, 158, 11, 0.15)'
-                        : 'rgba(239, 68, 68, 0.15)',
-                    color:
-                      currentTrust === 'HIGH'
-                        ? '#34d399'
+                        ? 'text-[#A8741A]'
+                        : 'text-[#C22830]'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        currentTrust === 'HIGH'
+                          ? 'bg-[#3FA27A]'
+                          : currentTrust === 'MEDIUM'
+                          ? 'bg-[#D9A441]'
+                          : 'bg-[#E5484D]'
+                      }`}
+                    />
+                    <span>
+                      {currentTrust === 'HIGH'
+                        ? 'High — Expert Verified'
                         : currentTrust === 'MEDIUM'
-                        ? '#fbbf24'
-                        : '#f87171',
-                    border: `1px solid ${
-                      currentTrust === 'HIGH'
-                        ? 'rgba(16, 185, 129, 0.3)'
-                        : currentTrust === 'MEDIUM'
-                        ? 'rgba(245, 158, 11, 0.3)'
-                        : 'rgba(239, 68, 68, 0.3)'
-                    }`,
-                  }}
-                >
-                  <span className="w-2 h-2 rounded-full animate-ping"
-                    style={{
-                      backgroundColor:
-                        currentTrust === 'HIGH' ? '#10b981' : currentTrust === 'MEDIUM' ? '#f59e0b' : '#ef4444',
-                    }}
-                  />
-                  <span>
-                    {currentTrust === 'HIGH'
-                      ? '🟢 High — Expert Verified'
-                      : currentTrust === 'MEDIUM'
-                      ? '🟡 Medium — Corroborated'
-                      : '🔴 Low — Self-reported (Needs Verification)'}
+                        ? 'Medium — Corroborated'
+                        : 'Low — Self-reported (Needs Verification)'}
+                    </span>
                   </span>
 
                   {/* Tooltip */}
-                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-72 p-2.5 bg-[#1B1B24] border border-white/10 rounded-xl text-[11px] text-white/80 shadow-2xl z-30 font-normal leading-relaxed">
+                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-cream text-ink border border-cream-deep rounded-xl text-[11px] shadow-cream z-30 font-normal leading-relaxed">
                     Trust comes from independent sources (telecom KYC, counterpart exports, device forensics), not from the file itself.
                   </div>
                 </div>
 
-                {/* Phase 7: RFC 3161 TSA Badge */}
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  <Radio className="w-3 h-3" />
+                {/* Phase 7: RFC 3161 TSA Badge — Cream pill */}
+                <Badge variant="neutral" size="sm" className="font-mono">
+                  <Radio className="w-3 h-3 mr-1 text-gold" />
                   <span>RFC 3161 TSA {tsrInfo?.tsaStatus === 'verified' ? 'Stamped' : 'Anchor'}</span>
-                </span>
+                </Badge>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gold shrink-0">
                   {getDeviceIcon(evidence.deviceType)}
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-serif italic text-white tracking-tight break-all">
+                  <h1 className="text-2xl md:text-3xl font-serif-italic text-white tracking-tight break-all">
                     {evidence.filename}
                   </h1>
-                  <p className="text-xs text-white/40 mt-0.5">
+                  <p className="text-xs text-white/60 mt-1 font-light">
                     {formatBytes(evidence.sizeBytes)} • {evidence.mimeType || 'Binary file'} • Uploaded by{' '}
                     <span className="text-white font-medium">{evidence.uploadedBy}</span>
                   </p>
@@ -535,24 +525,24 @@ export default function EvidenceDetail() {
               </div>
 
               {/* Device Details Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
-                <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
+                <div className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10">
                   <div className="text-white/40 text-[10px] font-mono uppercase">Device Type</div>
                   <div className="text-white font-medium mt-0.5">{evidence.deviceType}</div>
                 </div>
-                <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/5">
+                <div className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10">
                   <div className="text-white/40 text-[10px] font-mono uppercase">Make / Model</div>
                   <div className="text-white font-medium mt-0.5 truncate">
                     {evidence.makeModel || 'Not recorded'}
                   </div>
                 </div>
-                <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/5">
+                <div className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10">
                   <div className="text-white/40 text-[10px] font-mono uppercase">Serial No</div>
                   <div className="text-white font-mono mt-0.5 truncate">
                     {evidence.serialNo || 'N/A'}
                   </div>
                 </div>
-                <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/5">
+                <div className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10">
                   <div className="text-white/40 text-[10px] font-mono uppercase">IMEI / Device ID</div>
                   <div className="text-white font-mono mt-0.5 truncate">
                     {evidence.deviceId || 'N/A'}
@@ -562,8 +552,8 @@ export default function EvidenceDetail() {
 
               {/* Notes */}
               {evidence.notes && (
-                <div className="text-xs text-white/70 bg-black/40 p-3.5 rounded-xl border border-white/5 leading-relaxed">
-                  <span className="text-white/40 font-semibold uppercase text-[10px] block mb-1">
+                <div className="text-xs text-white/80 bg-white/[0.03] p-3.5 rounded-xl border border-white/10 leading-relaxed font-light">
+                  <span className="text-gold font-medium uppercase text-[10px] block mb-1">
                     Acquisition & Custody Notes:
                   </span>
                   {evidence.notes}
@@ -579,12 +569,11 @@ export default function EvidenceDetail() {
                 rel="noreferrer"
                 className="w-full"
               >
-                <Button size="md" className="gap-2 w-full justify-center shadow-lg shadow-emerald-500/10">
-                  <Download className="w-4 h-4" />
+                <Button size="md" className="w-full justify-center">
                   <span>Download Certificate (Draft)</span>
                 </Button>
               </a>
-              <p className="text-[11px] text-amber-400/90 text-center leading-tight bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+              <p className="text-[11px] text-ink font-medium text-center leading-tight bg-cream p-2.5 rounded-xl border border-cream-deep">
                 Draft — must be reviewed and signed by party & expert (Section 63 BSA)
               </p>
             </div>
@@ -592,10 +581,10 @@ export default function EvidenceDetail() {
         </Card>
 
         {/* ── Sealed SHA-256 Checksum Display Card ───────────────────── */}
-        <Card className="mb-8 p-6 bg-surface border-white/10">
+        <Card className="mb-8 p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-gold" />
               <h2 className="text-xs font-semibold text-white tracking-wider uppercase font-mono">
                 Sealed SHA-256 Checksum (Cryptographic Anchor)
               </h2>
@@ -603,11 +592,11 @@ export default function EvidenceDetail() {
             <button
               type="button"
               onClick={copyFullHash}
-              className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs text-gold hover:text-white font-medium transition-colors cursor-pointer"
             >
               {hashCopied ? (
                 <>
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-3.5 h-3.5 text-[#3FA27A]" />
                   <span>Copied full hash</span>
                 </>
               ) : (
@@ -619,16 +608,16 @@ export default function EvidenceDetail() {
             </button>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 font-mono text-xs md:text-sm text-emerald-400 break-all select-all tracking-wider">
+          <div className="p-3.5 rounded-xl bg-ink text-cream border border-ink/20 font-mono text-xs md:text-sm break-all select-all tracking-wider shadow-inner">
             {evidence.sha256}
           </div>
 
           {evidence.clientSha256 && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="mt-3 flex items-center gap-2 text-xs text-white/60 font-light">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#3FA27A]" />
               <span>
                 Pre-upload client match confirmed:{' '}
-                <span className="font-mono text-white/60">
+                <span className="font-mono text-white/80">
                   {evidence.clientSha256.slice(0, 16)}...
                 </span>
               </span>
@@ -636,26 +625,29 @@ export default function EvidenceDetail() {
           )}
         </Card>
 
+
         {/* ── Phase 6: WhatsApp Forensics Suite ──────────────────────── */}
         {analysis && (
           <div className="mb-8 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-white">
-                  WhatsApp <span className="font-serif italic text-white/50">Forensic Suite</span>
+                <h2 className="text-xl font-medium text-white">
+                  WhatsApp <span className="font-serif-italic font-normal text-gold">Forensic Suite</span>
                 </h2>
-                <p className="text-xs text-white/40 mt-0.5">
+                <p className="text-xs text-white/60 mt-0.5 font-light">
                   Content classification, sender mapping, red flags, corroboration checklist & diff audit
                 </p>
               </div>
 
-              {/* Forensic Navigation Tabs */}
-              <div className="flex items-center gap-1 p-1 bg-surface rounded-xl border border-white/10 text-xs overflow-x-auto">
+              {/* Forensic Navigation Tabs — Pill styled */}
+              <div className="flex items-center gap-1.5 p-1 bg-white/[0.04] rounded-full border border-white/10 text-xs overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setForensicTab('messages')}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    forensicTab === 'messages' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  className={`px-4 py-1.5 rounded-full font-medium transition-all ${
+                    forensicTab === 'messages'
+                      ? 'bg-cream text-ink shadow-sm'
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Messages ({analysis.messages.length})
@@ -663,13 +655,15 @@ export default function EvidenceDetail() {
                 <button
                   type="button"
                   onClick={() => setForensicTab('report')}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                    forensicTab === 'report' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  className={`px-4 py-1.5 rounded-full font-medium transition-all flex items-center gap-1.5 ${
+                    forensicTab === 'report'
+                      ? 'bg-cream text-ink shadow-sm'
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   <span>Flags</span>
                   {analysis.redFlags.length > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-300">
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-status-tampered/20 text-status-tampered font-bold">
                       {analysis.redFlags.length}
                     </span>
                   )}
@@ -677,8 +671,10 @@ export default function EvidenceDetail() {
                 <button
                   type="button"
                   onClick={() => setForensicTab('senders')}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    forensicTab === 'senders' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  className={`px-4 py-1.5 rounded-full font-medium transition-all ${
+                    forensicTab === 'senders'
+                      ? 'bg-cream text-ink shadow-sm'
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Who are these people?
@@ -686,8 +682,10 @@ export default function EvidenceDetail() {
                 <button
                   type="button"
                   onClick={() => setForensicTab('corroboration')}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    forensicTab === 'corroboration' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  className={`px-4 py-1.5 rounded-full font-medium transition-all ${
+                    forensicTab === 'corroboration'
+                      ? 'bg-cream text-ink shadow-sm'
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Corroboration
@@ -695,8 +693,10 @@ export default function EvidenceDetail() {
                 <button
                   type="button"
                   onClick={() => setForensicTab('diff')}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                    forensicTab === 'diff' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+                  className={`px-4 py-1.5 rounded-full font-medium transition-all flex items-center gap-1.5 ${
+                    forensicTab === 'diff'
+                      ? 'bg-cream text-ink shadow-sm'
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   <GitCompare className="w-3.5 h-3.5" />
@@ -707,8 +707,8 @@ export default function EvidenceDetail() {
 
             {/* TAB 1: Messages View with WhatsApp bubble styling */}
             {forensicTab === 'messages' && (
-              <Card className="p-6 bg-surface border-white/10 space-y-4">
-                <div className="flex items-center justify-between text-xs text-white/50 pb-3 border-b border-white/5">
+              <Card className="p-6 space-y-4">
+                <div className="flex items-center justify-between text-xs text-white/50 pb-3 border-b border-white/5 font-light">
                   <span>Chat Timeline (Hover over any message bubble to view line-level SHA-256 hash)</span>
                   <div className="flex items-center gap-3">
                     <span>{analysis.deletions} deletions</span>
@@ -716,6 +716,7 @@ export default function EvidenceDetail() {
                     <span>{analysis.edits} edits</span>
                   </div>
                 </div>
+
 
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                   {analysis.messages.map((m) => {
@@ -1135,18 +1136,18 @@ export default function EvidenceDetail() {
         {/* ── Verification & Integrity Controls (2-column layout) ─────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* 1. Verify File Drop Zone */}
-          <Card className="p-6 bg-surface border-white/10 flex flex-col justify-between">
+          <Card className="p-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <FileCheck className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-base font-semibold text-white">Verify File Integrity</h3>
+                <FileCheck className="w-4 h-4 text-gold" />
+                <h3 className="text-base font-medium text-white">Verify File Integrity</h3>
               </div>
-              <p className="text-xs text-white/50 mb-4 leading-relaxed">
+              <p className="text-xs text-white/60 mb-4 leading-relaxed font-light">
                 Drop a file copy to compute its fresh SHA-256 hash and cross-verify byte-for-byte against the sealed anchor.
               </p>
 
               {/* File input / dropzone */}
-              <div className="relative border border-dashed border-white/15 hover:border-emerald-500/40 rounded-xl p-4 text-center transition-colors bg-black/30">
+              <div className="relative border border-dashed border-white/20 hover:border-gold/40 rounded-xl p-4 text-center transition-colors bg-white/[0.03]">
                 <input
                   type="file"
                   onChange={(e) => {
@@ -1157,11 +1158,11 @@ export default function EvidenceDetail() {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <div className="flex flex-col items-center gap-1.5 py-1.5">
-                  <Upload className="w-5 h-5 text-white/30" />
-                  <span className="text-xs font-medium text-white/80">
+                  <Upload className="w-5 h-5 text-white/40" />
+                  <span className="text-xs font-medium text-white/90">
                     {verifyingFile ? 'Computing cleanroom hash...' : 'Drop or browse file to verify'}
                   </span>
-                  <span className="text-[10px] text-white/30">
+                  <span className="text-[10px] text-white/40 font-light">
                     Calculates fresh SHA-256 in memory without persisting
                   </span>
                 </div>
@@ -1172,21 +1173,21 @@ export default function EvidenceDetail() {
                 <div
                   className={`mt-4 p-4 rounded-xl border transition-all ${
                     fileVerifyResult.match
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      ? 'bg-[#EAF5EF] border-[#3FA27A]/30 text-ink'
+                      : 'bg-[#FDECEC] border-[#E5484D]/40 text-ink'
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     {fileVerifyResult.match ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-[#3FA27A] shrink-0 mt-0.5" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                      <XCircle className="w-5 h-5 text-[#E5484D] shrink-0 mt-0.5" />
                     )}
                     <div className="space-y-1 text-xs w-full">
-                      <div className="font-bold text-sm">
+                      <div className="font-semibold text-sm">
                         {fileVerifyResult.match ? 'Integrity Verified ✓' : 'File Altered ✗'}
                       </div>
-                      <p className="text-xs opacity-80">
+                      <p className="text-xs text-ink/80">
                         {fileVerifyResult.match
                           ? '100% cryptographic match confirmed. The file is unaltered since ingestion.'
                           : 'Cryptographic hash mismatch! The provided file differs from the sealed master.'}
@@ -1207,13 +1208,13 @@ export default function EvidenceDetail() {
           </Card>
 
           {/* 2. Verify Chain & Ghost Simulate Tamper */}
-          <Card className="p-6 bg-surface border-white/10 flex flex-col justify-between">
+          <Card className="p-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-base font-semibold text-white">Custody Chain Integrity</h3>
+                <ShieldCheck className="w-4 h-4 text-gold" />
+                <h3 className="text-base font-medium text-white">Custody Chain Integrity</h3>
               </div>
-              <p className="text-xs text-white/50 mb-4 leading-relaxed">
+              <p className="text-xs text-white/60 mb-4 leading-relaxed font-light">
                 Verifies every link in the append-only ledger ({custodyChain.length} events). Checks
                 cryptographic back-links and entry hashes.
               </p>
@@ -1223,24 +1224,22 @@ export default function EvidenceDetail() {
                   size="sm"
                   onClick={handleVerifyChain}
                   disabled={verifyingChain}
-                  className="gap-2"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${verifyingChain ? 'animate-spin' : ''}`} />
                   <span>{verifyingChain ? 'Auditing chain...' : 'Verify Chain'}</span>
                 </Button>
 
                 {/* Ghost "Simulate Tamper" button */}
-                <Button
-                  size="sm"
-                  variant="ghost"
+                <button
+                  type="button"
                   onClick={handleDemoTamper}
                   disabled={tampering}
-                  className="gap-1.5 border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                  className="px-4 py-2 rounded-full text-xs font-medium border border-status-tampered/40 text-status-tampered hover:bg-status-tampered/10 transition-colors inline-flex items-center gap-1.5"
                   title="Alters event #2 in database to demonstrate tamper detection"
                 >
-                  <Zap className="w-3.5 h-3.5 text-rose-400" />
+                  <Zap className="w-3.5 h-3.5" />
                   <span>{tampering ? 'Tampering...' : 'Simulate Tamper'}</span>
-                </Button>
+                </button>
               </div>
 
               {/* Chain Result Banner */}
@@ -1248,23 +1247,23 @@ export default function EvidenceDetail() {
                 <div
                   className={`mt-4 p-4 rounded-xl border transition-all ${
                     chainVerifyResult.ok
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      ? 'bg-[#EAF5EF] border-[#3FA27A]/30 text-ink'
+                      : 'bg-[#FDECEC] border-[#E5484D]/40 text-ink'
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     {chainVerifyResult.ok ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-[#3FA27A] shrink-0 mt-0.5" />
                     ) : (
-                      <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5 animate-bounce" />
+                      <AlertTriangle className="w-5 h-5 text-[#E5484D] shrink-0 mt-0.5 animate-bounce" />
                     )}
                     <div className="space-y-1 text-xs">
-                      <div className="font-bold text-sm">
+                      <div className="font-semibold text-sm">
                         {chainVerifyResult.ok
                           ? `Chain intact — ${custodyChain.length} entries verified`
-                          : `Tampering detected at entry #${chainVerifyResult.brokenAt} — reason`}
+                          : `Tampering detected at entry #${chainVerifyResult.brokenAt}`}
                       </div>
-                      <div className="opacity-80">
+                      <div className="text-ink/80">
                         {chainVerifyResult.ok
                           ? `All ${custodyChain.length} blocks verified with valid mathematical back-links.`
                           : chainVerifyResult.reason}
@@ -1281,21 +1280,20 @@ export default function EvidenceDetail() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-white">
-                Chain of Custody <span className="font-serif italic text-white/50">Timeline</span>
+              <h2 className="text-xl font-medium text-white">
+                Chain of Custody <span className="font-serif-italic font-normal text-gold">Timeline</span>
               </h2>
-              <p className="text-xs text-white/40 mt-0.5">
+              <p className="text-xs text-white/60 mt-0.5 font-light">
                 Append-only cryptographic ledger with timestamp & actor role authentication
               </p>
             </div>
-            <Button size="sm" onClick={() => setEventModalOpen(true)} className="gap-1.5 self-start sm:self-auto">
-              <Plus className="w-4 h-4" />
+            <Button size="sm" onClick={() => setEventModalOpen(true)} className="self-start sm:self-auto">
               <span>Add Custody Event</span>
             </Button>
           </div>
 
-          {/* Timeline List with Glowing Connecting Line */}
-          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-emerald-500/60 before:via-emerald-500/30 before:to-emerald-500/10 before:shadow-[0_0_8px_rgba(16,185,129,0.4)]">
+          {/* Timeline List with Glowing Gold Connecting Line */}
+          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-gold/70 before:via-gold/30 before:to-transparent before:shadow-[0_0_8px_rgba(201,163,91,0.4)]">
             {custodyChain.map((ev) => {
               const isTamperedNode = chainVerifyResult?.brokenAt === ev.seqNo
 
@@ -1303,15 +1301,15 @@ export default function EvidenceDetail() {
                 <div key={ev._id || ev.seqNo} className="relative group">
                   {/* Timeline node dot (turns red with pulse if tampered!) */}
                   <div
-                    className={`absolute -left-6 top-4 w-5 h-5 rounded-full bg-surface border-2 flex items-center justify-center -translate-x-1/2 transition-all ${
+                    className={`absolute -left-6 top-4 w-5 h-5 rounded-full bg-maroon-deep border-2 flex items-center justify-center -translate-x-1/2 transition-all ${
                       isTamperedNode
-                        ? 'border-rose-500 bg-rose-500/20 shadow-[0_0_16px_rgba(239,68,68,0.8)] animate-pulse scale-125'
-                        : 'border-emerald-500/60 group-hover:border-emerald-400 group-hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                        ? 'border-status-tampered bg-status-tampered/20 shadow-[0_0_16px_rgba(229,72,77,0.8)] animate-pulse scale-125'
+                        : 'border-gold/70 group-hover:border-gold group-hover:shadow-[0_0_10px_rgba(201,163,91,0.5)]'
                     }`}
                   >
                     <div
                       className={`w-1.5 h-1.5 rounded-full ${
-                        isTamperedNode ? 'bg-rose-400 animate-ping' : 'bg-emerald-400'
+                        isTamperedNode ? 'bg-status-tampered animate-ping' : 'bg-gold'
                       }`}
                     />
                   </div>
@@ -1319,8 +1317,8 @@ export default function EvidenceDetail() {
                   <Card
                     className={`p-5 transition-all ${
                       isTamperedNode
-                        ? 'bg-rose-500/5 border-rose-500/50 shadow-lg shadow-rose-500/10'
-                        : 'bg-surface/80 border-white/10 hover:border-white/20'
+                        ? 'bg-status-tampered/10 border-status-tampered/60 shadow-lg shadow-status-tampered/10'
+                        : 'hover:border-gold/30'
                     }`}
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
@@ -1328,15 +1326,15 @@ export default function EvidenceDetail() {
                         <span
                           className={`font-mono text-xs px-2 py-0.5 rounded border ${
                             isTamperedNode
-                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold'
+                              ? 'bg-status-tampered/20 text-status-tampered border-status-tampered/40 font-bold'
                               : 'bg-white/5 text-white/70 border-white/10'
                           }`}
                         >
                           #{ev.seqNo}
                         </span>
                         <h4
-                          className={`font-semibold text-sm ${
-                            isTamperedNode ? 'text-rose-300' : 'text-white'
+                          className={`font-medium text-sm ${
+                            isTamperedNode ? 'text-status-tampered' : 'text-white'
                           }`}
                         >
                           {ev.action}
@@ -1347,30 +1345,30 @@ export default function EvidenceDetail() {
                         <Badge variant={getRoleBadgeVariant(ev.actorRole)} size="sm">
                           {ev.actorRole}
                         </Badge>
-                        <span className="text-white/60 font-medium">{ev.actor}</span>
+                        <span className="text-white/75 font-medium">{ev.actor}</span>
                       </div>
                     </div>
 
                     {ev.details && (
-                      <p className="text-xs text-white/70 mb-3 bg-black/40 p-3 rounded-lg border border-white/5 leading-relaxed">
+                      <p className="text-xs text-white/80 mb-3 bg-white/[0.03] p-3 rounded-lg border border-white/5 leading-relaxed font-light">
                         {ev.details}
                       </p>
                     )}
 
                     {/* Monospace previous / entry hash row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono pt-3 border-t border-white/5 text-white/40">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono pt-3 border-t border-white/5 text-white/50">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-white/20">PREV:</span>
+                        <span className="text-white/30">PREV:</span>
                         <HashText hash={ev.prevHash} length={10} className="text-[11px]" />
                       </div>
                       <div className="flex items-center gap-1.5 md:justify-end">
-                        <span className="text-white/20">ENTRY HASH:</span>
+                        <span className="text-white/30">ENTRY HASH:</span>
                         <HashText hash={ev.entryHash} length={10} className="text-[11px]" />
                       </div>
                     </div>
 
-                    <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-white/30">
-                      <Clock className="w-3 h-3 text-white/20" />
+                    <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-white/40 font-light">
+                      <Clock className="w-3 h-3 text-white/30" />
                       <span>IST: {ev.timestampIST}</span>
                     </div>
                   </Card>
@@ -1390,7 +1388,7 @@ export default function EvidenceDetail() {
           <div className="space-y-4 pt-2">
             {/* Presets Button Group */}
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-1.5">
+              <label className="block text-xs font-medium text-ink mb-1.5">
                 Quick Action Presets
               </label>
               <div className="flex flex-wrap gap-2">
@@ -1404,7 +1402,7 @@ export default function EvidenceDetail() {
                     key={p.label}
                     type="button"
                     onClick={() => applyPreset(p.action, p.role)}
-                    className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors text-white/70"
+                    className="px-3 py-1 text-xs rounded-full bg-white/80 border border-ink/20 hover:border-gold hover:bg-white text-ink transition-colors font-medium"
                   >
                     + {p.label}
                   </button>
@@ -1414,6 +1412,7 @@ export default function EvidenceDetail() {
 
             <form onSubmit={handleAddEvent} className="space-y-4 pt-1">
               <Input
+                variant="light"
                 label="Action Description"
                 placeholder="e.g. Viewed by lawyer / Examined at Forensic Lab"
                 value={eventForm.action}
@@ -1423,6 +1422,7 @@ export default function EvidenceDetail() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Input
+                  variant="light"
                   label="Actor / Officer Name"
                   placeholder="e.g. Adv. Ravi Sharma / Dr. P. K. Sen"
                   value={eventForm.actor}
@@ -1431,6 +1431,7 @@ export default function EvidenceDetail() {
                 />
 
                 <Select
+                  variant="light"
                   label="Actor Role"
                   value={eventForm.actorRole}
                   onChange={(e) =>
@@ -1449,7 +1450,7 @@ export default function EvidenceDetail() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-white/70 mb-1.5">
+                <label className="block text-xs font-medium text-ink mb-1.5">
                   Custody Event Details
                 </label>
                 <textarea
@@ -1457,21 +1458,21 @@ export default function EvidenceDetail() {
                   placeholder="Details of examination, condition of seal, forensic tool used..."
                   value={eventForm.details}
                   onChange={(e) => setEventForm({ ...eventForm, details: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-surface border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none"
+                  className="w-full px-3.5 py-2.5 bg-white/80 border border-ink/20 rounded-xl text-sm text-ink placeholder-ink/40 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-                <Button
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-ink/10">
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={() => setEventModalOpen(false)}
                   disabled={addingEvent}
+                  className="px-5 py-2 rounded-full text-xs font-medium text-ink/70 hover:text-ink hover:underline transition-colors"
                 >
                   Cancel
-                </Button>
+                </button>
                 <Button type="submit" disabled={addingEvent}>
-                  {addingEvent ? 'Appending Block...' : 'Append Custody Event'}
+                  <span>{addingEvent ? 'Appending Block...' : 'Append Custody Event'}</span>
                 </Button>
               </div>
             </form>
@@ -1488,16 +1489,16 @@ export default function EvidenceDetail() {
         >
           <div className="space-y-4 pt-2">
             {loadingDraft ? (
-              <div className="py-12 text-center text-xs text-white/50 animate-pulse">
+              <div className="py-12 text-center text-xs text-ink/60 animate-pulse">
                 Generating official requisition draft...
               </div>
             ) : (
               <div className="space-y-3">
-                <pre className="p-4 bg-black/60 rounded-xl border border-white/10 font-mono text-[11px] text-white/80 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto select-all">
+                <pre className="p-4 bg-ink text-cream rounded-xl border border-ink/20 font-mono text-[11px] whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto select-all shadow-inner">
                   {draftContent}
                 </pre>
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-[11px] text-amber-400">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  <span className="text-[11px] text-ink/75 font-light">
                     Draft notice — to be issued only by the competent authority under due legal process.
                   </span>
                   <Button
@@ -1508,9 +1509,7 @@ export default function EvidenceDetail() {
                       toast.success('Draft notice copied to clipboard')
                       setTimeout(() => setCopiedDraft(false), 2000)
                     }}
-                    className="gap-1.5"
                   >
-                    {copiedDraft ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedDraft ? 'Copied' : 'Copy Draft'}</span>
                   </Button>
                 </div>
@@ -1522,3 +1521,4 @@ export default function EvidenceDetail() {
     </div>
   )
 }
+

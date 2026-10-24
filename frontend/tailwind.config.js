@@ -4,43 +4,44 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0B0B0F',
-        surface: '#14141A',
-        'surface-2': '#1A1A24',
-        primary: {
-          DEFAULT: '#10B981',
-          dark: '#059669',
-          light: '#34D399',
+        maroon: {
+          DEFAULT: '#3A0A10',
+          deep: '#2A070B',
+        },
+        surface: 'rgba(255, 255, 255, 0.04)',
+        cream: {
+          DEFAULT: '#EFE7DC',
+          deep: '#E4D9CA',
+        },
+        ink: '#3A0A10',
+        gold: '#C9A35B',
+        status: {
+          verified: '#3FA27A',
+          tampered: '#E5484D',
+          warning: '#D9A441',
         },
       },
-      fontFamily: {
-        sans: ['Inter', 'Arial', 'sans-serif'],
-        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
-        mono: ['"JetBrains Mono"', 'Menlo', 'monospace'],
-      },
-      boxShadow: {
-        card: '0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-        glow: '0 0 24px rgba(16,185,129,0.15)',
-        'glow-lg': '0 0 48px rgba(16,185,129,0.2)',
-        'glow-red': '0 0 24px rgba(239,68,68,0.15)',
-        'glow-amber': '0 0 24px rgba(245,158,11,0.15)',
+      textColor: {
+        'maroon-primary': '#FFFFFF',
+        'maroon-secondary': 'rgba(255, 255, 255, 0.75)',
+        'maroon-muted': 'rgba(255, 255, 255, 0.50)',
       },
       borderColor: {
-        subtle: 'rgba(255,255,255,0.08)',
+        'surface-subtle': 'rgba(255, 255, 255, 0.10)',
+        'maroon-border': 'rgba(255, 255, 255, 0.10)',
       },
-      animation: {
-        'in': 'in 0.15s ease-out',
-        'fade-in': 'fadeIn 0.2s ease-out',
+      fontFamily: {
+        sans: ['Montserrat', 'system-ui', 'sans-serif'],
+        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       },
-      keyframes: {
-        in: {
-          from: { opacity: '0', transform: 'scale(0.96)' },
-          to: { opacity: '1', transform: 'scale(1)' },
-        },
-        fadeIn: {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
+      borderRadius: {
+        card: '20px',
+        pill: '9999px',
+      },
+      boxShadow: {
+        cream: '0 8px 32px -4px rgba(42, 7, 11, 0.25), 0 4px 12px -2px rgba(42, 7, 11, 0.15)',
+        gold: '0 0 20px -2px rgba(201, 163, 91, 0.35)',
       },
     },
   },

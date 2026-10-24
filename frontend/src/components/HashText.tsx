@@ -7,9 +7,16 @@ interface HashTextProps {
   chars?: number
   length?: number
   className?: string
+  theme?: 'maroon' | 'cream'
 }
 
-export default function HashText({ hash, chars = 6, length, className = '' }: HashTextProps) {
+export default function HashText({
+  hash,
+  chars = 6,
+  length,
+  className = '',
+  theme = 'maroon',
+}: HashTextProps) {
   const [copied, setCopied] = useState(false)
   const [hovered, setHovered] = useState(false)
 
@@ -22,19 +29,31 @@ export default function HashText({ hash, chars = 6, length, className = '' }: Ha
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const isCream = theme === 'cream'
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 group ${className}`}
+      className={`inline-flex items-center gap-1.5 group font-mono ${className}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Hash text */}
       <span
-        className="font-mono text-xs text-emerald-400/80 relative"
+        className={`text-xs transition-colors relative cursor-default ${
+          isCream
+            ? 'text-ink/80 group-hover:text-ink'
+            : 'text-white/80 group-hover:text-white'
+        }`}
         title={hash}
       >
         {hovered ? (
-          <span className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg bg-[#1E1E28] border border-white/10 text-xs text-white/80 whitespace-nowrap shadow-xl z-10 font-mono">
+          <span
+            className={`absolute bottom-full left-0 mb-1 px-2.5 py-1 rounded-lg text-xs whitespace-nowrap shadow-xl z-20 font-mono tracking-tight ${
+              isCream
+                ? 'bg-cream text-ink border border-cream-deep shadow-cream'
+                : 'bg-[#2A070B] text-white/95 border border-white/20'
+            }`}
+          >
             {hash}
           </span>
         ) : null}
@@ -44,11 +63,16 @@ export default function HashText({ hash, chars = 6, length, className = '' }: Ha
       {/* Copy button */}
       <button
         onClick={copy}
-        className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-white/30 hover:text-emerald-400"
+        type="button"
+        className={`opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded ${
+          isCream
+            ? 'text-ink/40 hover:text-ink'
+            : 'text-white/40 hover:text-gold'
+        }`}
         title="Copy full hash"
       >
         {copied ? (
-          <Check className="w-3 h-3 text-emerald-400" />
+          <Check className="w-3 h-3 text-[#3FA27A]" />
         ) : (
           <Copy className="w-3 h-3" />
         )}
@@ -56,3 +80,4 @@ export default function HashText({ hash, chars = 6, length, className = '' }: Ha
     </span>
   )
 }
+
