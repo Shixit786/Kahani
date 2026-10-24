@@ -6,6 +6,7 @@ import Cases from './pages/Cases'
 import CaseDetail from './pages/CaseDetail'
 import EvidenceDetail from './pages/EvidenceDetail'
 import PublicVerify from './pages/PublicVerify'
+import MobileCapture from './pages/MobileCapture'
 
 export default function App() {
   return (
@@ -16,7 +17,9 @@ export default function App() {
         <Route path="/cases" element={<Cases />} />
         <Route path="/cases/:id" element={<CaseDetail />} />
         <Route path="/evidence/:id" element={<EvidenceDetail />} />
+        <Route path="/verify" element={<PublicVerify />} />
         <Route path="/verify/:id" element={<PublicVerify />} />
+        <Route path="/mobile" element={<MobileCapture />} />
       </Routes>
       <Toaster
         position="bottom-right"

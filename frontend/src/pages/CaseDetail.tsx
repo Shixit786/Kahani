@@ -350,7 +350,7 @@ export default function CaseDetail() {
             </div>
             {/* Title in serif italic */}
             <h1 className="text-3xl md:text-4xl font-medium text-white tracking-tight leading-tight">
-              <span className="font-serif-italic font-normal text-gold">{caseData.title}</span>
+              Matter <span className="font-serif-italic font-normal text-gold">{caseData.title}</span>
             </h1>
             {caseData.description && (
               <p className="text-sm text-white/75 mt-2 max-w-3xl leading-relaxed font-light">

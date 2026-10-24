@@ -514,8 +514,8 @@ export default function EvidenceDetail() {
                   {getDeviceIcon(evidence.deviceType)}
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-serif-italic text-white tracking-tight break-all">
-                    {evidence.filename}
+                  <h1 className="text-2xl md:text-3xl font-medium text-white tracking-tight break-all">
+                    Evidence <span className="font-serif-italic font-normal text-gold">{evidence.filename}</span>
                   </h1>
                   <p className="text-xs text-white/60 mt-1 font-light">
                     {formatBytes(evidence.sizeBytes)} • {evidence.mimeType || 'Binary file'} • Uploaded by{' '}
@@ -580,19 +580,19 @@ export default function EvidenceDetail() {
           </div>
         </Card>
 
-        {/* ── Sealed SHA-256 Checksum Display Card ───────────────────── */}
-        <Card className="mb-8 p-6">
+        {/* ── Sealed SHA-256 Checksum Display Card (Cream Card Pop) ──── */}
+        <div className="mb-8 p-6 rounded-card bg-cream text-ink border border-cream-deep shadow-cream">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-gold" />
-              <h2 className="text-xs font-semibold text-white tracking-wider uppercase font-mono">
+              <h2 className="text-xs font-semibold text-ink tracking-wider uppercase font-mono">
                 Sealed SHA-256 Checksum (Cryptographic Anchor)
               </h2>
             </div>
             <button
               type="button"
               onClick={copyFullHash}
-              className="inline-flex items-center gap-1.5 text-xs text-gold hover:text-white font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs text-ink hover:text-gold font-medium transition-colors cursor-pointer"
             >
               {hashCopied ? (
                 <>
@@ -613,17 +613,17 @@ export default function EvidenceDetail() {
           </div>
 
           {evidence.clientSha256 && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-white/60 font-light">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#3FA27A]" />
+            <div className="mt-3 flex items-center gap-2 text-xs text-ink/75 font-light">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D5B]" />
               <span>
                 Pre-upload client match confirmed:{' '}
-                <span className="font-mono text-white/80">
+                <span className="font-mono text-ink font-medium">
                   {evidence.clientSha256.slice(0, 16)}...
                 </span>
               </span>
             </div>
           )}
-        </Card>
+        </div>
 
 
         {/* ── Phase 6: WhatsApp Forensics Suite ──────────────────────── */}
@@ -979,22 +979,24 @@ export default function EvidenceDetail() {
               </Card>
             )}
 
-            {/* TAB 5: Compare Diff Panel (Phase 5) */}
+            {/* TAB 5: Compare Diff Panel (Phase 5 - Cream Panel) */}
             {forensicTab === 'diff' && (
-              <Card className="p-6 bg-surface border-white/10 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+              <div className="p-6 rounded-card bg-cream text-ink border border-cream-deep shadow-cream space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-cream-deep">
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Cryptographic Chat Diff Engine</h3>
-                    <p className="text-xs text-white/40 mt-0.5">
+                    <h3 className="text-sm font-semibold text-ink">
+                      Cryptographic Chat <span className="font-serif-italic font-normal">Diff Engine</span>
+                    </h3>
+                    <p className="text-xs text-ink/70 mt-0.5 font-light">
                       Upload a counterpart export or fresh re-export to align messages within the original window.
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 p-1 bg-black/40 rounded-lg border border-white/10 text-xs">
+                  <div className="flex items-center gap-1 p-1 bg-cream-deep/60 rounded-full border border-cream-deep text-xs">
                     <button
                       type="button"
                       onClick={() => setDiffSubTab('counterpart')}
-                      className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                        diffSubTab === 'counterpart' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'
+                      className={`px-3 py-1 rounded-full font-medium transition-colors ${
+                        diffSubTab === 'counterpart' ? 'bg-white text-ink shadow-sm' : 'text-ink/60 hover:text-ink'
                       }`}
                     >
                       Counterpart Chat
@@ -1002,8 +1004,8 @@ export default function EvidenceDetail() {
                     <button
                       type="button"
                       onClick={() => setDiffSubTab('reexport')}
-                      className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                        diffSubTab === 'reexport' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'
+                      className={`px-3 py-1 rounded-full font-medium transition-colors ${
+                        diffSubTab === 'reexport' ? 'bg-white text-ink shadow-sm' : 'text-ink/60 hover:text-ink'
                       }`}
                     >
                       Fresh Re-export
@@ -1012,7 +1014,7 @@ export default function EvidenceDetail() {
                 </div>
 
                 {/* Upload dropzone for counterpart / re-export */}
-                <div className="relative border border-dashed border-white/15 hover:border-emerald-500/40 rounded-xl p-4 text-center transition-colors bg-black/20">
+                <div className="relative border-2 border-dashed border-ink/20 hover:border-gold rounded-2xl p-5 text-center transition-colors bg-white/70 hover:bg-white">
                   <input
                     type="file"
                     onChange={(e) => {
@@ -1023,14 +1025,14 @@ export default function EvidenceDetail() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div className="flex flex-col items-center gap-1">
-                    <Upload className="w-5 h-5 text-white/30" />
-                    <span className="text-xs font-medium text-white/80">
+                    <Upload className="w-5 h-5 text-ink/40" />
+                    <span className="text-xs font-semibold text-ink">
                       {uploadingDiff
                         ? 'Aligning and computing diff...'
                         : `Drop or browse ${diffSubTab} export (.txt)`}
                     </span>
-                    <span className="text-[10px] text-white/30">
-                      Will be preserved as linked evidence and cross-compared against master
+                    <span className="text-[10px] text-ink/60 font-light">
+                      Preserved as linked evidence and cross-compared against master
                     </span>
                   </div>
                 </div>
@@ -1040,33 +1042,33 @@ export default function EvidenceDetail() {
                   <div className="space-y-4 pt-3">
                     {/* Summary Bar */}
                     <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
-                        <div className="text-white/40 text-[10px]">UNCHANGED</div>
-                        <div className="text-base font-bold text-white font-mono">
+                      <div className="p-2.5 rounded-xl bg-white border border-cream-deep text-ink">
+                        <div className="text-ink/50 text-[10px] font-semibold">UNCHANGED</div>
+                        <div className="text-base font-bold font-mono">
                           {diffResult.summary.unchanged}
                         </div>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
-                        <div className="text-amber-400/80 text-[10px]">MODIFIED</div>
+                      <div className="p-2.5 rounded-xl bg-[#FEF8EC] border border-[#D9A441]/40 text-[#A8741A]">
+                        <div className="text-[10px] font-semibold">MODIFIED</div>
                         <div className="text-base font-bold font-mono">
                           {diffResult.summary.modified}
                         </div>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
-                        <div className="text-rose-400/80 text-[10px]">REMOVED</div>
+                      <div className="p-2.5 rounded-xl bg-[#FDECEC] border border-[#E5484D]/40 text-[#C22830]">
+                        <div className="text-[10px] font-semibold">REMOVED</div>
                         <div className="text-base font-bold font-mono">
                           {diffResult.summary.removed}
                         </div>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                        <div className="text-emerald-400/80 text-[10px]">ADDED</div>
+                      <div className="p-2.5 rounded-xl bg-[#EAF5EF] border border-[#3FA27A]/40 text-[#2E7D5B]">
+                        <div className="text-[10px] font-semibold">ADDED</div>
                         <div className="text-base font-bold font-mono">
                           {diffResult.summary.added}
                         </div>
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-amber-400/80 italic">
+                    <p className="text-[11px] text-[#A8741A] italic">
                       Notice: Removed messages may indicate editing before upload. Confirm with physical device forensics.
                     </p>
 
@@ -1077,25 +1079,25 @@ export default function EvidenceDetail() {
                           key={idx}
                           className={`p-3 rounded-xl border text-xs grid grid-cols-1 md:grid-cols-2 gap-3 ${
                             item.status === 'removed'
-                              ? 'bg-rose-500/10 border-rose-500/30'
+                              ? 'bg-[#FDECEC] border-[#E5484D]/30 text-ink'
                               : item.status === 'added'
-                              ? 'bg-emerald-500/10 border-emerald-500/30'
+                              ? 'bg-[#EAF5EF] border-[#3FA27A]/30 text-ink'
                               : item.status === 'modified'
-                              ? 'bg-amber-500/10 border-amber-500/30'
-                              : 'bg-black/30 border-white/5'
+                              ? 'bg-[#FEF8EC] border-[#D9A441]/30 text-ink'
+                              : 'bg-white border-cream-deep text-ink'
                           }`}
                         >
                           <div>
-                            <div className="text-[10px] text-white/40 mb-1">
+                            <div className="text-[10px] text-ink/50 mb-1 font-semibold">
                               MASTER CHAT ({item.original ? `${item.original.date} ${item.original.time}` : 'NONE'})
                             </div>
-                            <div className="text-white/80">
-                              {item.original ? item.original.text : <span className="text-white/30 italic">Not present</span>}
+                            <div className="text-ink/85">
+                              {item.original ? item.original.text : <span className="text-ink/40 italic">Not present</span>}
                             </div>
                           </div>
 
                           <div>
-                            <div className="text-[10px] text-white/40 mb-1">
+                            <div className="text-[10px] text-ink/50 mb-1 font-semibold">
                               COUNTERPART ({item.counterpart ? `${item.counterpart.date} ${item.counterpart.time}` : 'NONE'})
                             </div>
                             <div>
@@ -1106,10 +1108,10 @@ export default function EvidenceDetail() {
                                       key={dIdx}
                                       className={
                                         d.type === 'removed'
-                                          ? 'bg-rose-500/40 text-rose-200 line-through px-0.5 rounded mr-0.5'
+                                          ? 'bg-[#FDECEC] text-[#C22830] border border-[#E5484D]/30 line-through px-1 rounded mr-0.5'
                                           : d.type === 'added'
-                                          ? 'bg-emerald-500/40 text-emerald-200 font-bold px-0.5 rounded mr-0.5'
-                                          : 'text-white/80'
+                                          ? 'bg-[#EAF5EF] text-[#2E7D5B] border border-[#3FA27A]/30 font-semibold px-1 rounded mr-0.5'
+                                          : 'text-ink/85'
                                       }
                                     >
                                       {d.value}
@@ -1117,9 +1119,9 @@ export default function EvidenceDetail() {
                                   ))}
                                 </div>
                               ) : item.counterpart ? (
-                                <span className="text-white/80">{item.counterpart.text}</span>
+                                <span className="text-ink/85">{item.counterpart.text}</span>
                               ) : (
-                                <span className="text-rose-400 italic">Omitted in counterpart export</span>
+                                <span className="text-[#C22830] italic font-medium">Omitted in counterpart export</span>
                               )}
                             </div>
                           </div>
@@ -1128,7 +1130,7 @@ export default function EvidenceDetail() {
                     </div>
                   </div>
                 )}
-              </Card>
+              </div>
             )}
           </div>
         )}
@@ -1314,27 +1316,27 @@ export default function EvidenceDetail() {
                     />
                   </div>
 
-                  <Card
-                    className={`p-5 transition-all ${
+                  <div
+                    className={`p-5 rounded-card transition-all ${
                       isTamperedNode
-                        ? 'bg-status-tampered/10 border-status-tampered/60 shadow-lg shadow-status-tampered/10'
-                        : 'hover:border-gold/30'
+                        ? 'bg-[#FDECEC] border-2 border-status-tampered shadow-lg shadow-status-tampered/25 animate-pulse text-ink'
+                        : 'bg-cream text-ink border border-cream-deep shadow-cream hover:shadow-lg'
                     }`}
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`font-mono text-xs px-2 py-0.5 rounded border ${
+                          className={`font-mono text-xs px-2.5 py-0.5 rounded-full border ${
                             isTamperedNode
                               ? 'bg-status-tampered/20 text-status-tampered border-status-tampered/40 font-bold'
-                              : 'bg-white/5 text-white/70 border-white/10'
+                              : 'bg-white text-ink border-cream-deep font-semibold'
                           }`}
                         >
                           #{ev.seqNo}
                         </span>
                         <h4
                           className={`font-medium text-sm ${
-                            isTamperedNode ? 'text-status-tampered' : 'text-white'
+                            isTamperedNode ? 'text-status-tampered font-bold' : 'text-ink'
                           }`}
                         >
                           {ev.action}
@@ -1345,33 +1347,33 @@ export default function EvidenceDetail() {
                         <Badge variant={getRoleBadgeVariant(ev.actorRole)} size="sm">
                           {ev.actorRole}
                         </Badge>
-                        <span className="text-white/75 font-medium">{ev.actor}</span>
+                        <span className="text-ink font-semibold">{ev.actor}</span>
                       </div>
                     </div>
 
                     {ev.details && (
-                      <p className="text-xs text-white/80 mb-3 bg-white/[0.03] p-3 rounded-lg border border-white/5 leading-relaxed font-light">
+                      <p className="text-xs text-ink/85 mb-3 bg-white/70 p-3 rounded-xl border border-cream-deep leading-relaxed font-light">
                         {ev.details}
                       </p>
                     )}
 
                     {/* Monospace previous / entry hash row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono pt-3 border-t border-white/5 text-white/50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono pt-3 border-t border-cream-deep text-ink/65">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-white/30">PREV:</span>
-                        <HashText hash={ev.prevHash} length={10} className="text-[11px]" />
+                        <span className="text-ink/50 font-semibold">PREV:</span>
+                        <HashText hash={ev.prevHash} length={10} className="text-[11px] text-ink" />
                       </div>
                       <div className="flex items-center gap-1.5 md:justify-end">
-                        <span className="text-white/30">ENTRY HASH:</span>
-                        <HashText hash={ev.entryHash} length={10} className="text-[11px]" />
+                        <span className="text-ink/50 font-semibold">ENTRY HASH:</span>
+                        <HashText hash={ev.entryHash} length={10} className="text-[11px] text-ink" />
                       </div>
                     </div>
 
-                    <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-white/40 font-light">
-                      <Clock className="w-3 h-3 text-white/30" />
+                    <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-ink/60 font-light">
+                      <Clock className="w-3 h-3 text-gold" />
                       <span>IST: {ev.timestampIST}</span>
                     </div>
-                  </Card>
+                  </div>
                 </div>
               )
             })}

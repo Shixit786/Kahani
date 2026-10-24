@@ -94,10 +94,10 @@ export default function Cases() {
                 Section 63 BSA 2023 Evidence Registry
               </Badge>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-medium text-white tracking-tight">
-              Case <span className="font-serif-italic font-normal text-gold">Workspace</span>
+            <h1 className="text-3xl sm:text-5xl font-sans font-medium text-white tracking-tight">
+              Your <em className="font-serif-italic font-normal not-italic text-gold">Cases</em>
             </h1>
-            <p className="text-sm text-white/75 mt-1 font-light">
+            <p className="text-sm text-white/75 mt-1 font-sans font-light">
               Cryptographically sealed electronic evidence registers and tamper-evident custody chains
             </p>
           </div>
@@ -124,20 +124,20 @@ export default function Cases() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="p-6 border-white/5 animate-pulse flex flex-col justify-between h-56">
+              <Card key={i} variant="light" className="p-6 animate-pulse flex flex-col justify-between h-56">
                 <div>
                   <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="h-6 bg-white/10 rounded w-2/3" />
-                    <div className="h-5 bg-white/5 rounded-full w-14" />
+                    <div className="h-6 bg-ink/15 rounded w-2/3" />
+                    <div className="h-5 bg-ink/10 rounded-full w-14" />
                   </div>
                   <div className="space-y-2 mb-6">
-                    <div className="h-3.5 bg-white/5 rounded w-full" />
-                    <div className="h-3.5 bg-white/5 rounded w-4/5" />
+                    <div className="h-3.5 bg-ink/10 rounded w-full" />
+                    <div className="h-3.5 bg-ink/10 rounded w-4/5" />
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div className="h-3.5 bg-white/5 rounded w-1/3" />
-                  <div className="h-3.5 bg-white/5 rounded w-1/4" />
+                <div className="pt-4 border-t border-ink/10 flex items-center justify-between">
+                  <div className="h-3.5 bg-ink/10 rounded w-1/3" />
+                  <div className="h-3.5 bg-ink/10 rounded w-1/4" />
                 </div>
               </Card>
             ))}
@@ -169,40 +169,44 @@ export default function Cases() {
                 onClick={() => navigate(`/cases/${c._id}`)}
                 className="group cursor-pointer"
               >
-                <Card className="h-full flex flex-col justify-between p-6 hover:border-gold/40 transition-all duration-300 hover:-translate-y-1">
+                {/* Case Card as Cream Card with Ink text */}
+                <Card
+                  variant="light"
+                  className="h-full flex flex-col justify-between p-6 shadow-cream hover:-translate-y-2 hover:shadow-2xl transition-all duration-300"
+                >
                   <div>
                     {/* Top row: Title in serif italic + evidence count badge */}
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <h2 className="text-xl font-serif-italic text-white group-hover:text-gold transition-colors line-clamp-2 leading-snug">
+                      <h2 className="text-xl font-serif-italic text-ink group-hover:text-gold transition-colors line-clamp-2 leading-snug">
                         {c.title}
                       </h2>
-                      <Badge variant="neutral" size="sm" className="shrink-0 font-mono mt-0.5">
-                        <FileCheck2 className="w-3 h-3 mr-1" />
+                      <span className="shrink-0 font-mono text-xs px-2.5 py-0.5 rounded-full bg-ink/5 border border-ink/10 text-ink font-medium inline-flex items-center gap-1 mt-0.5">
+                        <FileCheck2 className="w-3 h-3 text-ink/70" />
                         <span>{c.evidenceCount ?? 0}</span>
-                      </Badge>
+                      </span>
                     </div>
 
                     {/* Description snippet */}
-                    <p className="text-xs text-white/70 line-clamp-2 mb-5 leading-relaxed font-light">
+                    <p className="text-xs text-ink/75 line-clamp-2 mb-5 leading-relaxed font-light">
                       {c.description || 'No case description entered.'}
                     </p>
                   </div>
 
                   {/* Bottom metadata */}
-                  <div className="pt-4 border-t border-white/10 space-y-2.5">
+                  <div className="pt-4 border-t border-ink/10 space-y-2.5">
                     {/* Party name */}
-                    <div className="flex items-center gap-2 text-xs text-white/80">
-                      <User className="w-3.5 h-3.5 text-gold shrink-0" />
-                      <span className="truncate font-medium">{c.partyName}</span>
+                    <div className="flex items-center gap-2 text-xs text-ink font-medium">
+                      <User className="w-3.5 h-3.5 text-ink/60 shrink-0" />
+                      <span className="truncate">{c.partyName}</span>
                     </div>
 
                     {/* Created date & CTA */}
-                    <div className="flex items-center justify-between text-[11px] text-white/50 pt-1 font-light">
+                    <div className="flex items-center justify-between text-[11px] text-ink/60 pt-1 font-light">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3 h-3 text-white/40" />
+                        <Calendar className="w-3 h-3 text-ink/40" />
                         <span>{new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                       </div>
-                      <span className="text-gold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 font-medium">
+                      <span className="text-ink font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
                         Open case <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
@@ -212,6 +216,7 @@ export default function Cases() {
             ))}
           </div>
         )}
+
 
         {/* New Case Modal */}
         <Modal
