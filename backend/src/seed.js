@@ -39,16 +39,23 @@ async function seed() {
   await connectDB();
   console.log('[SEED] Connected ✓');
 
-  // ── Idempotency: remove previous seed ────────────────────────────────────
+  // ── Idempotency: remove previous seed (DB + uploads on disk) ─────────────
   const oldCase = await Case.findOne({ title: SEED_CASE_TITLE }).lean();
   if (oldCase) {
+    // Delete uploads directory for old case (actual files on disk)
+    const oldUploadsDir = path.join(__dirname, '..', 'uploads', String(oldCase._id));
+    if (fs.existsSync(oldUploadsDir)) {
+      fs.rmSync(oldUploadsDir, { recursive: true, force: true });
+      console.log(`[SEED] Removed old uploads dir: ${oldUploadsDir}`);
+    }
+    // Delete DB records in dependency order
     const oldEvidences = await Evidence.find({ caseId: oldCase._id }).lean();
     for (const ev of oldEvidences) {
       await CustodyEvent.deleteMany({ evidenceId: ev._id });
     }
     await Evidence.deleteMany({ caseId: oldCase._id });
     await Case.deleteOne({ _id: oldCase._id });
-    console.log('[SEED] Removed previous seed data.');
+    console.log('[SEED] Removed previous seed DB records.');
   }
 
   // ── Create case ───────────────────────────────────────────────────────────
