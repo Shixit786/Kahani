@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -11,6 +11,8 @@ import {
   Clock,
   Upload,
   CheckCircle2,
+  XCircle,
+  AlertTriangle,
   FileText,
   Shield,
   ArrowRight,
@@ -20,6 +22,9 @@ import {
   Smartphone,
   Cloud,
   HelpCircle,
+  Copy,
+  Check,
+  Zap,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Card from '../components/Card'
@@ -92,10 +97,24 @@ export default function CaseDetail() {
 
   // Upload Evidence Modal State
   const [modalOpen, setModalOpen] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [clientHash, setClientHash] = useState<string>('')
+  const [displayedHash, setDisplayedHash] = useState<string>('')
   const [computingHash, setComputingHash] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [declarationAccepted, setDeclarationAccepted] = useState(false)
+
+  // Success / Error Cards inside modal
+  const [uploadSuccess, setUploadSuccess] = useState<{
+    evidence: Evidence
+    lockedAtIST: string
+  } | null>(null)
+  const [mismatchError, setMismatchError] = useState<{
+    clientSha256: string
+    serverSha256: string
+  } | null>(null)
+  const [copiedHash, setCopiedHash] = useState(false)
 
   const [form, setForm] = useState({
     deviceType: 'Computer' as Evidence['deviceType'],
@@ -105,6 +124,8 @@ export default function CaseDetail() {
     uploadedBy: '',
     notes: '',
   })
+
+  const typingTimerRef = useRef<number | null>(null)
 
   const loadCase = useCallback(async () => {
     if (!id) return
@@ -123,24 +144,82 @@ export default function CaseDetail() {
     loadCase()
   }, [loadCase])
 
-  const handleFileChange = async (file: File | null) => {
-    if (!file) {
-      setSelectedFile(null)
-      setClientHash('')
-      return
+  // Clean typing interval on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current)
     }
+  }, [])
 
+  const handleFileProcess = async (file: File) => {
     setSelectedFile(file)
     setComputingHash(true)
+    setClientHash('')
+    setDisplayedHash('')
+    setMismatchError(null)
+    setUploadSuccess(null)
+
+    if (typingTimerRef.current) clearInterval(typingTimerRef.current)
+
     try {
-      const hash = await computeBrowserSha256(file)
-      setClientHash(hash)
+      const fullHash = await computeBrowserSha256(file)
+      setClientHash(fullHash)
+
+      // Live typing effect
+      let charIndex = 0
+      typingTimerRef.current = window.setInterval(() => {
+        charIndex += 2
+        if (charIndex <= fullHash.length) {
+          setDisplayedHash(fullHash.slice(0, charIndex))
+        } else {
+          setDisplayedHash(fullHash)
+          if (typingTimerRef.current) clearInterval(typingTimerRef.current)
+          setComputingHash(false)
+        }
+      }, 15)
     } catch (e) {
       console.error(e)
-      toast.error('Failed to compute client SHA-256 checksum')
-    } finally {
+      toast.error('Failed to compute client SHA-256 hash')
       setComputingHash(false)
     }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFileProcess(file)
+  }
+
+  const resetUploadModal = () => {
+    setSelectedFile(null)
+    setClientHash('')
+    setDisplayedHash('')
+    setComputingHash(false)
+    setDeclarationAccepted(false)
+    setUploadSuccess(null)
+    setMismatchError(null)
+    setForm({
+      deviceType: 'Computer',
+      makeModel: '',
+      serialNo: '',
+      deviceId: '',
+      uploadedBy: '',
+      notes: '',
+    })
   }
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
@@ -150,8 +229,15 @@ export default function CaseDetail() {
       return
     }
 
+    if (!declarationAccepted) {
+      toast.error('You must declare that the evidence is genuine under BNS')
+      return
+    }
+
     try {
       setUploading(true)
+      setMismatchError(null)
+
       const formData = new FormData()
       formData.append('file', selectedFile)
       if (clientHash) formData.append('clientSha256', clientHash)
@@ -161,27 +247,37 @@ export default function CaseDetail() {
       formData.append('deviceId', form.deviceId)
       formData.append('uploadedBy', form.uploadedBy || 'Investigating Officer')
       formData.append('notes', form.notes)
+      formData.append('declarationAccepted', 'true')
 
       const res = await uploadEvidence(id, formData)
-      toast.success('Evidence locked & custody chain initialized!')
-      setModalOpen(false)
-      setSelectedFile(null)
-      setClientHash('')
-      setForm({
-        deviceType: 'Computer',
-        makeModel: '',
-        serialNo: '',
-        deviceId: '',
-        uploadedBy: '',
-        notes: '',
+      toast.success('Evidence hash locked & custody chain initialized!')
+      setUploadSuccess({
+        evidence: res.evidence,
+        lockedAtIST: res.lockedAtIST,
       })
+
+      // Refresh table immediately in background
       await loadCase()
-      navigate(`/evidence/${res.evidence._id}`)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || err.message || 'Upload failed')
+      if (err.response?.status === 409) {
+        setMismatchError({
+          clientSha256: err.response.data?.clientSha256 || clientHash,
+          serverSha256: err.response.data?.serverSha256 || 'Unknown',
+        })
+        toast.error('Hash mismatch detected! Upload rejected.')
+      } else {
+        toast.error(err.response?.data?.error || err.message || 'Upload failed')
+      }
     } finally {
       setUploading(false)
     }
+  }
+
+  const copySuccessHash = (hash: string) => {
+    navigator.clipboard.writeText(hash)
+    setCopiedHash(true)
+    toast.success('SHA-256 hash copied to clipboard')
+    setTimeout(() => setCopiedHash(false), 2000)
   }
 
   // Loading Skeleton View
@@ -190,32 +286,20 @@ export default function CaseDetail() {
       <div className="min-h-screen pt-20 pb-16">
         <div className="max-w-6xl mx-auto px-6 space-y-6">
           <div className="h-4 w-28 bg-white/5 rounded animate-pulse" />
-
-          {/* Header skeleton */}
           <div className="space-y-3">
             <div className="h-9 w-2/3 max-w-lg bg-white/10 rounded-lg animate-pulse" />
             <div className="h-4 w-1/3 bg-white/5 rounded animate-pulse" />
           </div>
-
-          {/* Party details card skeleton */}
           <Card className="p-6 bg-surface border-white/5 animate-pulse">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <div className="h-3 w-20 bg-white/10 rounded" />
-                <div className="h-5 w-40 bg-white/5 rounded" />
-              </div>
-              <div className="space-y-2">
-                <div className="h-3 w-24 bg-white/10 rounded" />
-                <div className="h-5 w-52 bg-white/5 rounded" />
-              </div>
-              <div className="space-y-2">
-                <div className="h-3 w-28 bg-white/10 rounded" />
-                <div className="h-5 w-32 bg-white/5 rounded" />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 w-20 bg-white/10 rounded" />
+                  <div className="h-5 w-32 bg-white/5 rounded" />
+                </div>
+              ))}
             </div>
           </Card>
-
-          {/* Table skeleton */}
           <Card className="p-6 bg-surface border-white/5 animate-pulse space-y-4">
             <div className="h-4 w-32 bg-white/10 rounded mb-4" />
             {[1, 2, 3].map((i) => (
@@ -275,7 +359,10 @@ export default function CaseDetail() {
 
           <Button
             size="md"
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              resetUploadModal()
+              setModalOpen(true)
+            }}
             className="gap-2 shrink-0 self-start md:self-center"
           >
             <Plus className="w-4 h-4" />
@@ -358,7 +445,14 @@ export default function CaseDetail() {
             <p className="text-white/40 text-xs mt-1.5 max-w-md leading-relaxed">
               Upload electronic documents, audio/video recordings, disk dumps, or mobile exports to compute irreversible SHA-256 checksums and initiate the chain of custody.
             </p>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="mt-6 gap-1.5">
+            <Button
+              size="sm"
+              onClick={() => {
+                resetUploadModal()
+                setModalOpen(true)
+              }}
+              className="mt-6 gap-1.5"
+            >
               <Plus className="w-4 h-4" />
               <span>Add First Evidence</span>
             </Button>
@@ -450,7 +544,7 @@ export default function CaseDetail() {
           </Card>
         )}
 
-        {/* ── Add Evidence Modal ─────────────────────────────────────── */}
+        {/* ── Add Evidence Modal (Phase 1) ─────────────────────────────── */}
         <Modal
           open={modalOpen}
           onClose={() => {
@@ -458,150 +552,288 @@ export default function CaseDetail() {
           }}
           title="Secure Evidence Ingestion"
           description="Hash locked electronic evidence ingestion with Section 63 BSA compliance."
+          maxWidth="lg"
         >
-          <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
-            {/* File dropzone / selector */}
-            <div>
-              <label className="block text-xs font-medium text-white/70 mb-1.5">
-                Select Evidence File <span className="text-rose-400">*</span>
-              </label>
-              <div
-                className={`relative border-2 border-dashed rounded-xl p-5 text-center transition-all ${
-                  selectedFile
-                    ? 'border-emerald-500/40 bg-emerald-500/5'
-                    : 'border-white/10 hover:border-white/20 bg-surface/50'
-                }`}
-              >
-                <input
-                  type="file"
-                  id="evidence-file-input"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  disabled={uploading}
-                />
-                {selectedFile ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2 text-emerald-400">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span className="font-medium text-sm text-white truncate max-w-xs">
-                        {selectedFile.name}
-                      </span>
+          {uploadSuccess ? (
+            /* Success Card: "Hash locked", IST time, full hash with copy */
+            <div className="space-y-5 pt-3">
+              <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-base font-bold text-white">Hash locked & sealed</h4>
+                      <Badge variant="verified" size="sm" className="font-mono">
+                        BSA COMPLIANT
+                      </Badge>
                     </div>
-                    <div className="text-xs text-white/40">
-                      {formatBytes(selectedFile.size)} • {selectedFile.type || 'Binary file'}
+                    <p className="text-xs text-white/70">
+                      The file fingerprint has been irreversibly stamped into the genesis custody event.
+                    </p>
+                    <div className="flex items-center gap-2 text-xs font-mono text-emerald-400/90 pt-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Locked at IST: {uploadSuccess.lockedAtIST}</span>
                     </div>
+                  </div>
+                </div>
 
-                    {/* Real-time client SHA-256 preview */}
-                    <div className="pt-2 text-left bg-black/40 rounded-lg p-2.5 border border-white/10">
-                      <div className="text-[10px] text-emerald-400/80 font-mono flex items-center justify-between mb-1">
-                        <span>CLIENT SHA-256 (PRE-UPLOAD):</span>
-                        {computingHash && <span className="animate-pulse">Computing...</span>}
-                      </div>
-                      {clientHash ? (
-                        <div className="font-mono text-[11px] text-white/90 break-all select-all">
-                          {clientHash}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-white/30 italic">Calculating file hash...</div>
-                      )}
-                    </div>
+                {/* Full SHA-256 Checksum with Copy */}
+                <div className="mt-4 pt-3 border-t border-emerald-500/20">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400/80 mb-1.5">
+                    <span>SEALED SHA-256 CHECKSUM</span>
+                    <button
+                      type="button"
+                      onClick={() => copySuccessHash(uploadSuccess.evidence.sha256)}
+                      className="inline-flex items-center gap-1 text-white hover:text-emerald-300 transition-colors cursor-pointer"
+                    >
+                      {copiedHash ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedHash ? 'Copied' : 'Copy Full Hash'}</span>
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-2 py-2">
-                    <div className="w-10 h-10 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                      <Upload className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs text-white/70 font-medium">
-                      Click to browse or drop evidence file here
-                    </p>
-                    <p className="text-[11px] text-white/30">
-                      Supports audio, video, forensic images, PDF, and logs (up to 50MB)
-                    </p>
+                  <div className="p-3 bg-black/60 rounded-xl font-mono text-xs text-emerald-400 break-all select-all border border-emerald-500/20">
+                    {uploadSuccess.evidence.sha256}
                   </div>
-                )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    resetUploadModal()
+                  }}
+                >
+                  Add Another File
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setModalOpen(false)
+                    navigate(`/evidence/${uploadSuccess.evidence._id}`)
+                  }}
+                  className="gap-2"
+                >
+                  <span>Open Evidence Record</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
               </div>
             </div>
+          ) : (
+            <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
+              {/* 409 Error Card: Red card with both hashes */}
+              {mismatchError && (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-2">
+                  <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
+                    <XCircle className="w-4 h-4 shrink-0" />
+                    <span>Upload Rejected: Hash Mismatch (409 Conflict)</span>
+                  </div>
+                  <p className="text-xs text-white/70">
+                    The SHA-256 calculated by your browser differs from the hash calculated on the server stream. The file has been discarded to protect chain integrity.
+                  </p>
+                  <div className="bg-black/40 p-2.5 rounded-lg border border-rose-500/20 font-mono text-[11px] space-y-1">
+                    <div className="text-white/60">
+                      Client Hash: <span className="text-rose-300 break-all">{mismatchError.clientSha256}</span>
+                    </div>
+                    <div className="text-white/60">
+                      Server Hash: <span className="text-rose-300 break-all">{mismatchError.serverSha256}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            {/* Device Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Select
-                label="Device Type"
-                value={form.deviceType}
-                onChange={(e) =>
-                  setForm({ ...form, deviceType: e.target.value as Evidence['deviceType'] })
-                }
-                options={[
-                  { value: 'Computer', label: 'Computer / Laptop' },
-                  { value: 'Mobile', label: 'Mobile Device' },
-                  { value: 'Flash Drive', label: 'Flash Drive / USB' },
-                  { value: 'Cloud', label: 'Cloud Storage / Server' },
-                  { value: 'Other', label: 'Other Electronic Media' },
-                ]}
-              />
+              {/* Drag-and-drop zone with scan animation */}
+              <div>
+                <label className="block text-xs font-medium text-white/70 mb-1.5">
+                  Select or Drop Evidence File <span className="text-rose-400">*</span>
+                </label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`relative border-2 border-dashed rounded-xl p-5 text-center transition-all overflow-hidden ${
+                    isDragging
+                      ? 'border-emerald-400 bg-emerald-500/10 scale-[1.01]'
+                      : selectedFile
+                      ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : 'border-white/10 hover:border-white/20 bg-surface/50'
+                  }`}
+                >
+                  {/* Laser scan animation when computing hash */}
+                  {computingHash && (
+                    <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse top-0 bottom-0 m-auto shadow-[0_0_12px_#10B981]" />
+                  )}
+
+                  <input
+                    type="file"
+                    id="evidence-file-input"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleFileProcess(f)
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={uploading}
+                  />
+
+                  {selectedFile ? (
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-center gap-2 text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5 shrink-0" />
+                        <span className="font-medium text-sm text-white truncate max-w-xs">
+                          {selectedFile.name}
+                        </span>
+                      </div>
+                      <div className="text-xs text-white/40">
+                        {formatBytes(selectedFile.size)} • {selectedFile.type || 'Binary data'}
+                      </div>
+
+                      {/* Live typing-in SHA-256 preview */}
+                      <div className="pt-2 text-left bg-black/50 rounded-lg p-3 border border-white/10 relative">
+                        <div className="text-[10px] text-emerald-400 font-mono flex items-center justify-between mb-1.5">
+                          <span className="flex items-center gap-1.5">
+                            <Zap className="w-3 h-3 animate-pulse" />
+                            <span>BROWSER SHA-256 (CRYPTO.SUBTLE):</span>
+                          </span>
+                          {computingHash ? (
+                            <span className="text-emerald-400 animate-pulse font-mono text-[10px]">
+                              Scanning byte stream...
+                            </span>
+                          ) : (
+                            <span className="text-emerald-400 text-[10px] font-mono">100% computed</span>
+                          )}
+                        </div>
+                        <div className="font-mono text-xs text-emerald-300 break-all select-all tracking-wider min-h-[2.5rem] flex items-center">
+                          {displayedHash || (
+                            <span className="text-white/20 italic text-xs">Computing hash...</span>
+                          )}
+                          {computingHash && (
+                            <span className="inline-block w-1.5 h-3.5 bg-emerald-400 ml-1 animate-ping" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 py-3">
+                      <div className="w-12 h-12 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                        <Upload className="w-6 h-6" />
+                      </div>
+                      <p className="text-xs text-white/80 font-medium">
+                        Drag and drop evidence file here, or click to browse
+                      </p>
+                      <p className="text-[11px] text-white/30">
+                        Supported: WhatsApp exports (.txt), photos, call audio, CCTV video, forensic disk images (up to 50MB)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Device Metadata */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Select
+                  label="Device Type"
+                  value={form.deviceType}
+                  onChange={(e) =>
+                    setForm({ ...form, deviceType: e.target.value as Evidence['deviceType'] })
+                  }
+                  options={[
+                    { value: 'Computer', label: 'Computer / Laptop' },
+                    { value: 'Mobile', label: 'Mobile Device' },
+                    { value: 'Flash Drive', label: 'Flash Drive / USB' },
+                    { value: 'Cloud', label: 'Cloud Storage / Server' },
+                    { value: 'Other', label: 'Other Electronic Media' },
+                  ]}
+                />
+
+                <Input
+                  label="Make / Model"
+                  placeholder="e.g. Samsung Galaxy A52 / Dell Latitude"
+                  value={form.makeModel}
+                  onChange={(e) => setForm({ ...form, makeModel: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input
+                  label="Serial Number"
+                  placeholder="e.g. SN-R5CX501ABCD"
+                  value={form.serialNo}
+                  onChange={(e) => setForm({ ...form, serialNo: e.target.value })}
+                />
+
+                <div>
+                  <Input
+                    label="IMEI / MAC / Cloud ID"
+                    placeholder="e.g. 355123456789012"
+                    value={form.deviceId}
+                    onChange={(e) => setForm({ ...form, deviceId: e.target.value })}
+                  />
+                  <p className="text-[10px] text-white/30 mt-1">
+                    Helper: Dial *#06# on mobile devices to display IMEI
+                  </p>
+                </div>
+              </div>
 
               <Input
-                label="Make / Model"
-                placeholder="e.g. Dell Latitude 7420 / iPhone 14"
-                value={form.makeModel}
-                onChange={(e) => setForm({ ...form, makeModel: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                label="Serial Number"
-                placeholder="e.g. SN-88392190"
-                value={form.serialNo}
-                onChange={(e) => setForm({ ...form, serialNo: e.target.value })}
+                label="Custodian / Uploaded By"
+                placeholder="e.g. Inspector R. Verma / Meena Kumari"
+                value={form.uploadedBy}
+                onChange={(e) => setForm({ ...form, uploadedBy: e.target.value })}
+                required
               />
 
-              <Input
-                label="Device ID / IMEI / MAC"
-                placeholder="e.g. 864201048892120 / MAC"
-                value={form.deviceId}
-                onChange={(e) => setForm({ ...form, deviceId: e.target.value })}
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-medium text-white/70 mb-1.5">
+                  Acquisition & Forensic Notes
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Conditions of seizure, physical state, acquisition tool..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-surface border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none"
+                />
+              </div>
 
-            <Input
-              label="Custody Officer / Uploaded By"
-              placeholder="e.g. Inspector R. Verma"
-              value={form.uploadedBy}
-              onChange={(e) => setForm({ ...form, uploadedBy: e.target.value })}
-            />
+              {/* Required Statutory Declaration Checkbox */}
+              <div className="pt-2">
+                <label className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 cursor-pointer group hover:bg-amber-500/10 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={declarationAccepted}
+                    onChange={(e) => setDeclarationAccepted(e.target.checked)}
+                    className="mt-0.5 rounded border-white/20 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 bg-surface"
+                    required
+                  />
+                  <span className="text-xs text-white/80 leading-relaxed select-none">
+                    <span className="font-semibold text-amber-400">Statutory Declaration:</span> I declare this evidence is genuine. Fabricating false evidence is a punishable offence under Bharatiya Nyaya Sanhita (BNS).
+                  </span>
+                </label>
+              </div>
 
-            <div>
-              <label className="block text-xs font-medium text-white/70 mb-1.5">
-                Acquisition Notes
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Conditions of seizure, physical state, acquisition notes..."
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full px-3.5 py-2 bg-surface border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setModalOpen(false)}
-                disabled={uploading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={uploading || !selectedFile || computingHash}
-                className="gap-2"
-              >
-                <Lock className="w-4 h-4" />
-                <span>{uploading ? 'Locking Hash & Securing...' : 'Secure & Upload'}</span>
-              </Button>
-            </div>
-          </form>
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setModalOpen(false)}
+                  disabled={uploading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={uploading || !selectedFile || computingHash || !declarationAccepted}
+                  className="gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>{uploading ? 'Locking Hash & Securing...' : 'Secure & Lock Hash'}</span>
+                </Button>
+              </div>
+            </form>
+          )}
         </Modal>
       </div>
     </div>

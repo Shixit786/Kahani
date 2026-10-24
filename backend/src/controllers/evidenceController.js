@@ -60,8 +60,26 @@ export async function uploadEvidence(req, res, next) {
       }
 
       // 2. Validate required fields
-      const { clientSha256, deviceType, makeModel, serialNo, deviceId, uploadedBy, notes } =
-        req.body;
+      const {
+        clientSha256,
+        deviceType,
+        makeModel,
+        serialNo,
+        deviceId,
+        uploadedBy,
+        notes,
+        declarationAccepted,
+      } = req.body;
+
+      // Enforce BNS declaration
+      const isDeclared = declarationAccepted === 'true' || declarationAccepted === true;
+      if (!isDeclared) {
+        fs.unlinkSync(storagePath);
+        return res.status(400).json({
+          error:
+            'Declaration required: You must declare that this evidence is genuine under Bharatiya Sakshya Adhiniyam / BNS.',
+        });
+      }
 
       if (!uploadedBy?.trim()) {
         fs.unlinkSync(storagePath);
@@ -75,6 +93,13 @@ export async function uploadEvidence(req, res, next) {
           error: `deviceType must be one of: ${validDeviceTypes.join(', ')}`,
         });
       }
+
+      // Capture uploader IP and user agent
+      const uploaderIp =
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        req.socket?.remoteAddress ||
+        '127.0.0.1';
+      const userAgent = req.headers['user-agent'] || 'Unknown Client';
 
       // 3. Compute server-side SHA-256 (streaming)
       const serverSha256 = await sha256File(storagePath);
@@ -104,14 +129,18 @@ export async function uploadEvidence(req, res, next) {
         notes: notes ?? '',
         uploadedBy,
         storagePath,
+        declarationAccepted: true,
+        uploaderIp,
+        userAgent,
       });
 
       // 6. Append genesis custody event (append-only, single authorised path)
+      const custodyDetails = `SHA-256: ${serverSha256} | Declaration: Genuine evidence under BNS accepted | IP: ${uploaderIp} | Client: ${userAgent.slice(0, 80)}`;
       const custodyEvent = await appendCustodyEvent(evidence._id, {
         action: 'Evidence received & hash locked',
         actor: uploadedBy,
         actorRole: 'Party',
-        details: `SHA-256: ${serverSha256}`,
+        details: custodyDetails,
       });
 
       res.status(201).json({
