@@ -1,22 +1,25 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  FolderOpen,
   ArrowLeft,
   Plus,
+  FileCheck2,
+  Lock,
+  User,
+  MapPin,
+  Calendar,
+  Clock,
+  Upload,
+  CheckCircle2,
   FileText,
+  Shield,
+  ArrowRight,
+  ChevronRight,
   HardDrive,
   Cpu,
   Smartphone,
   Cloud,
   HelpCircle,
-  Calendar,
-  User,
-  MapPin,
-  Upload,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Card from '../components/Card'
@@ -28,7 +31,7 @@ import Select from '../components/Select'
 import HashText from '../components/HashText'
 import { getCaseById, uploadEvidence, type Case, type Evidence } from '../lib/api'
 
-// Compute SHA-256 using standard Web Crypto API
+// Compute SHA-256 using standard browser Web Crypto API
 async function computeBrowserSha256(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
@@ -37,25 +40,46 @@ async function computeBrowserSha256(file: File): Promise<string> {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
+  if (bytes === 0) return '0 B'
   const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+function formatIST(dateStr: string): string {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    return (
+      d.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }) + ' IST'
+    )
+  } catch {
+    return dateStr
+  }
 }
 
 function getDeviceIcon(type: string) {
   switch (type) {
     case 'Computer':
-      return <Cpu className="w-4 h-4" />
+      return <Cpu className="w-3.5 h-3.5" />
     case 'Mobile':
-      return <Smartphone className="w-4 h-4" />
+      return <Smartphone className="w-3.5 h-3.5" />
     case 'Flash Drive':
-      return <HardDrive className="w-4 h-4" />
+      return <HardDrive className="w-3.5 h-3.5" />
     case 'Cloud':
-      return <Cloud className="w-4 h-4" />
+      return <Cloud className="w-3.5 h-3.5" />
     default:
-      return <HelpCircle className="w-4 h-4" />
+      return <HelpCircle className="w-3.5 h-3.5" />
   }
 }
 
@@ -66,7 +90,7 @@ export default function CaseDetail() {
   const [caseData, setCaseData] = useState<(Case & { evidence: Evidence[] }) | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Upload Modal State
+  // Upload Evidence Modal State
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [clientHash, setClientHash] = useState<string>('')
@@ -89,7 +113,7 @@ export default function CaseDetail() {
       const data = await getCaseById(id)
       setCaseData(data)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to load case')
+      toast.error(err.response?.data?.error || err.message || 'Failed to load case matter')
     } finally {
       setLoading(false)
     }
@@ -113,7 +137,7 @@ export default function CaseDetail() {
       setClientHash(hash)
     } catch (e) {
       console.error(e)
-      toast.error('Failed to compute client hash')
+      toast.error('Failed to compute client SHA-256 checksum')
     } finally {
       setComputingHash(false)
     }
@@ -122,7 +146,7 @@ export default function CaseDetail() {
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id || !selectedFile) {
-      toast.error('Please choose a file to upload')
+      toast.error('Please choose a file to ingest')
       return
     }
 
@@ -154,21 +178,50 @@ export default function CaseDetail() {
       await loadCase()
       navigate(`/evidence/${res.evidence._id}`)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Upload failed')
+      toast.error(err.response?.data?.error || err.message || 'Upload failed')
     } finally {
       setUploading(false)
     }
   }
 
+  // Loading Skeleton View
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 pb-16">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="animate-pulse space-y-6">
-            <div className="h-6 w-32 bg-white/5 rounded" />
-            <div className="h-28 bg-surface rounded-2xl border border-white/5" />
-            <div className="h-64 bg-surface rounded-2xl border border-white/5" />
+      <div className="min-h-screen pt-20 pb-16">
+        <div className="max-w-6xl mx-auto px-6 space-y-6">
+          <div className="h-4 w-28 bg-white/5 rounded animate-pulse" />
+
+          {/* Header skeleton */}
+          <div className="space-y-3">
+            <div className="h-9 w-2/3 max-w-lg bg-white/10 rounded-lg animate-pulse" />
+            <div className="h-4 w-1/3 bg-white/5 rounded animate-pulse" />
           </div>
+
+          {/* Party details card skeleton */}
+          <Card className="p-6 bg-surface border-white/5 animate-pulse">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-white/10 rounded" />
+                <div className="h-5 w-40 bg-white/5 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-24 bg-white/10 rounded" />
+                <div className="h-5 w-52 bg-white/5 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-28 bg-white/10 rounded" />
+                <div className="h-5 w-32 bg-white/5 rounded" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Table skeleton */}
+          <Card className="p-6 bg-surface border-white/5 animate-pulse space-y-4">
+            <div className="h-4 w-32 bg-white/10 rounded mb-4" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 bg-white/5 rounded-xl w-full" />
+            ))}
+          </Card>
         </div>
       </div>
     )
@@ -177,15 +230,17 @@ export default function CaseDetail() {
   if (!caseData) {
     return (
       <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
-        <Card className="text-center py-12 px-8 max-w-md">
-          <p className="text-white/60 mb-4">Case matter not found</p>
+        <Card className="text-center py-12 px-8 max-w-md bg-surface border-white/10">
+          <p className="text-white/60 mb-4 text-sm">Case matter could not be found.</p>
           <Button size="sm" onClick={() => navigate('/cases')}>
-            Back to Cases
+            Return to Cases
           </Button>
         </Card>
       </div>
     )
   }
+
+  const evidenceList = caseData.evidence || []
 
   return (
     <div className="min-h-screen pt-20 pb-16">
@@ -197,153 +252,207 @@ export default function CaseDetail() {
             className="inline-flex items-center gap-2 text-xs text-white/50 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to all Cases</span>
+            <span>Back to Cases</span>
           </Link>
         </div>
 
-        {/* Case Meta Header Banner */}
-        <Card className="mb-8 p-6 md:p-8 bg-surface/90 border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+        {/* ── Case Header ─────────────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono bg-white/5 border border-white/10 text-white/60 mb-2">
+              <span>CASE #{caseData._id.slice(-6).toUpperCase()}</span>
+            </div>
+            {/* Title in serif italic */}
+            <h1 className="text-3xl md:text-4xl font-serif italic text-white tracking-tight leading-tight">
+              {caseData.title}
+            </h1>
+            {caseData.description && (
+              <p className="text-sm text-white/50 mt-1.5 max-w-3xl leading-relaxed">
+                {caseData.description}
+              </p>
+            )}
+          </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-            <div className="space-y-3 max-w-3xl">
-              <div className="flex items-center gap-2">
-                <Badge variant="verified" size="sm" className="font-mono">
-                  CASE #{caseData._id.slice(-6).toUpperCase()}
-                </Badge>
-                <span className="text-xs text-white/40">
-                  Created {new Date(caseData.createdAt).toLocaleDateString()}
-                </span>
+          <Button
+            size="md"
+            onClick={() => setModalOpen(true)}
+            className="gap-2 shrink-0 self-start md:self-center"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Evidence</span>
+          </Button>
+        </div>
+
+        {/* ── Party Details Card ─────────────────────────────────────── */}
+        <Card className="mb-8 p-6 bg-surface border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-2xl pointer-events-none" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10 text-xs">
+            {/* Party Name */}
+            <div>
+              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
+                <User className="w-3.5 h-3.5 text-emerald-400/80" />
+                <span>PARTY / CUSTODIAN</span>
               </div>
-
-              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                {caseData.title}
-              </h1>
-
-              {caseData.description && (
-                <p className="text-sm text-white/60 leading-relaxed">
-                  {caseData.description}
-                </p>
-              )}
-
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-white/50 pt-2 border-t border-white/5">
-                <div className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-white/30" />
-                  <span className="text-white/80 font-medium">Party:</span> {caseData.partyName}
-                </div>
-                {caseData.partyAddress && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-white/30" />
-                    <span>{caseData.partyAddress}</span>
-                  </div>
-                )}
+              <div className="text-sm font-semibold text-white truncate">
+                {caseData.partyName}
               </div>
             </div>
 
-            <Button
-              size="md"
-              onClick={() => setModalOpen(true)}
-              className="gap-2 shrink-0 self-start lg:self-center"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Evidence Item</span>
-            </Button>
+            {/* Party Address */}
+            <div>
+              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400/80" />
+                <span>DEPARTMENT / ADDRESS</span>
+              </div>
+              <div className="text-xs text-white/70 line-clamp-2 leading-relaxed">
+                {caseData.partyAddress || 'Not specified'}
+              </div>
+            </div>
+
+            {/* Created IST */}
+            <div>
+              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-emerald-400/80" />
+                <span>REGISTERED (IST)</span>
+              </div>
+              <div className="text-xs font-mono text-white/80">
+                {formatIST(caseData.createdAt)}
+              </div>
+            </div>
+
+            {/* Evidence Count */}
+            <div>
+              <div className="flex items-center gap-1.5 text-white/40 mb-1.5 font-medium">
+                <FileCheck2 className="w-3.5 h-3.5 text-emerald-400/80" />
+                <span>EVIDENCE FILES</span>
+              </div>
+              <div className="text-sm font-mono font-semibold text-emerald-400">
+                {evidenceList.length} {evidenceList.length === 1 ? 'record' : 'records'} locked
+              </div>
+            </div>
           </div>
         </Card>
 
-        {/* Evidence Section */}
-        <div className="mb-6 flex items-center justify-between">
+        {/* ── Evidence Table Section ─────────────────────────────────── */}
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">
-              Evidence <span className="font-serif italic text-white/50">Ledger</span>
+            <h2 className="text-lg font-semibold text-white">
+              Evidence <span className="font-serif italic text-white/50">Register</span>
             </h2>
             <p className="text-xs text-white/40 mt-0.5">
-              Cryptographically locked electronic evidence & chain-of-custody records
+              Click any item to inspect its custody chain, verify SHA-256 hash, or download the BSA certificate.
             </p>
           </div>
-          <Badge variant="neutral" size="md" className="font-mono">
-            {caseData.evidence?.length || 0} ITEMS RECORDED
-          </Badge>
         </div>
 
-        {/* Evidence Grid */}
-        {!caseData.evidence || caseData.evidence.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center py-16 text-center border-dashed border-white/10">
-            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-              <HardDrive className="w-7 h-7 text-white/30" />
+        {evidenceList.length === 0 ? (
+          /* Elegant Empty State */
+          <Card className="flex flex-col items-center justify-center py-20 px-6 text-center border-dashed border-white/10 bg-surface/40">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+              <HardDrive className="w-8 h-8 text-white/30" />
             </div>
-            <p className="text-white/80 font-medium text-base">No evidence logged for this case yet</p>
-            <p className="text-white/40 text-xs mt-1 max-w-sm">
-              Upload electronic documents, audio, videos, or disk dumps to compute client & server SHA-256 hashes.
+            <h3 className="text-white/80 font-medium text-base">
+              No evidence yet — add the first file to lock its hash
+            </h3>
+            <p className="text-white/40 text-xs mt-1.5 max-w-md leading-relaxed">
+              Upload electronic documents, audio/video recordings, disk dumps, or mobile exports to compute irreversible SHA-256 checksums and initiate the chain of custody.
             </p>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="mt-5 gap-1.5">
+            <Button size="sm" onClick={() => setModalOpen(true)} className="mt-6 gap-1.5">
               <Plus className="w-4 h-4" />
-              <span>Upload First Evidence</span>
+              <span>Add First Evidence</span>
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {caseData.evidence.map((item) => (
-              <div
-                key={item._id}
-                onClick={() => navigate(`/evidence/${item._id}`)}
-                className="group cursor-pointer"
-              >
-                <Card className="h-full flex flex-col justify-between hover:border-emerald-500/40 hover:bg-surface-2/60 transition-all duration-200">
-                  <div>
-                    {/* Top row */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                          {getDeviceIcon(item.deviceType)}
+          /* Evidence Table */
+          <Card className="overflow-hidden bg-surface border-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                {/* Table Header */}
+                <thead>
+                  <tr className="border-b border-white/10 text-[11px] font-mono uppercase text-white/40 bg-black/20">
+                    <th className="py-3.5 px-5">Filename</th>
+                    <th className="py-3.5 px-4">SHA-256 Checksum</th>
+                    <th className="py-3.5 px-4">Uploaded (IST)</th>
+                    <th className="py-3.5 px-4">Uploaded By</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+
+                {/* Table Body */}
+                <tbody className="divide-y divide-white/5">
+                  {evidenceList.map((item) => (
+                    <tr
+                      key={item._id}
+                      onClick={() => navigate(`/evidence/${item._id}`)}
+                      className="group cursor-pointer hover:bg-white/[0.04] transition-colors"
+                    >
+                      {/* Filename & size */}
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            {getDeviceIcon(item.deviceType)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-white group-hover:text-emerald-400 transition-colors truncate max-w-xs md:max-w-sm">
+                              {item.filename}
+                            </div>
+                            <div className="text-[11px] text-white/40 flex items-center gap-2 mt-0.5">
+                              <span>{formatBytes(item.sizeBytes)}</span>
+                              <span>•</span>
+                              <span>{item.deviceType}</span>
+                              {item.makeModel && (
+                                <>
+                                  <span>•</span>
+                                  <span className="truncate max-w-[120px]">{item.makeModel}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-medium text-sm text-white group-hover:text-emerald-400 transition-colors truncate">
-                          {item.filename}
+                      </td>
+
+                      {/* HashText */}
+                      <td className="py-4 px-4 font-mono">
+                        <HashText hash={item.sha256} length={8} />
+                      </td>
+
+                      {/* Uploaded IST Time */}
+                      <td className="py-4 px-4 text-white/70 font-mono text-[11px] whitespace-nowrap">
+                        {formatIST(item.createdAt)}
+                      </td>
+
+                      {/* Uploaded By */}
+                      <td className="py-4 px-4 text-white/80 font-medium whitespace-nowrap">
+                        {item.uploadedBy || 'Custodian'}
+                      </td>
+
+                      {/* Locked Badge */}
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                        <Badge variant="verified" size="sm" className="font-mono gap-1">
+                          <Lock className="w-3 h-3" />
+                          <span>Locked</span>
+                        </Badge>
+                      </td>
+
+                      {/* Row Action Link */}
+                      <td className="py-4 px-4 text-right whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400/80 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all">
+                          Inspect <ChevronRight className="w-3.5 h-3.5" />
                         </span>
-                      </div>
-                      <Badge variant="neutral" size="sm" className="shrink-0 text-[10px]">
-                        {formatBytes(item.sizeBytes)}
-                      </Badge>
-                    </div>
-
-                    {/* Metadata tags */}
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      <Badge variant="verified" size="sm" className="gap-1 text-[10px]">
-                        <Lock className="w-2.5 h-2.5" />
-                        <span>{item.deviceType}</span>
-                      </Badge>
-                      {item.makeModel && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-white/60">
-                          {item.makeModel}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* SHA256 snippet */}
-                    <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 mb-3">
-                      <div className="text-[10px] font-mono text-white/40 uppercase mb-1">
-                        SHA-256 Checksum
-                      </div>
-                      <HashText hash={item.sha256} length={12} className="text-xs" />
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
-                    <span>By: {item.uploadedBy || 'Custodian'}</span>
-                    <span className="text-emerald-400/80 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 font-medium">
-                      Audit chain <ArrowRight className="w-3 h-3" />
-                    </span>
-                  </div>
-                </Card>
-              </div>
-            ))}
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
 
-        {/* Add Evidence Modal */}
+        {/* ── Add Evidence Modal ─────────────────────────────────────── */}
         <Modal
-          isOpen={modalOpen}
+          open={modalOpen}
           onClose={() => {
             if (!uploading) setModalOpen(false)
           }}

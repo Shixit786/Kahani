@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderOpen, Plus, Search, Calendar, User, FileText, ArrowRight, ShieldCheck } from 'lucide-react'
+import {
+  FolderOpen,
+  Plus,
+  Search,
+  Calendar,
+  User,
+  ArrowRight,
+  ShieldCheck,
+  FileCheck2,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -31,7 +40,7 @@ export default function Cases() {
       const data = await getCases()
       setCases(data)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to load cases')
+      toast.error(err.response?.data?.error || err.message || 'Failed to load cases')
     } finally {
       setLoading(false)
     }
@@ -43,21 +52,25 @@ export default function Cases() {
 
   const handleCreateCase = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.title.trim() || !form.partyName.trim()) {
-      toast.error('Title and Party Name are required')
+    if (!form.title.trim()) {
+      toast.error('Case title is required')
+      return
+    }
+    if (!form.partyName.trim()) {
+      toast.error('Party name is required')
       return
     }
 
     try {
       setSubmitting(true)
-      const newCase = await createCase(form)
-      toast.success('Case created successfully')
+      await createCase(form)
+      toast.success('Case matter created successfully')
       setModalOpen(false)
       setForm({ title: '', description: '', partyName: '', partyAddress: '' })
-      setCases((prev) => [newCase, ...prev])
-      navigate(`/cases/${newCase._id}`)
+      // Refresh list
+      await fetchCases()
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to create case')
+      toast.error(err.response?.data?.error || err.message || 'Failed to create case')
     } finally {
       setSubmitting(false)
     }
@@ -78,18 +91,18 @@ export default function Cases() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>BSA 2023 Compliant Repository</span>
+              <span>Section 63 BSA 2023 Evidence Registry</span>
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight">
-              Case <span className="font-serif italic font-normal text-white/50">Workspace</span>
+              Case <span className="font-serif italic font-normal text-emerald-400/90">Workspace</span>
             </h1>
             <p className="text-sm text-white/50 mt-1">
-              Browse case matters, audit custody timelines, and issue Section 63 BSA certificates
+              Cryptographically sealed electronic evidence registers and tamper-evident custody chains
             </p>
           </div>
           <Button size="md" onClick={() => setModalOpen(true)} className="gap-2 shrink-0">
             <Plus className="w-4 h-4" />
-            <span>Create New Case</span>
+            <span>New Case</span>
           </Button>
         </div>
 
@@ -101,39 +114,49 @@ export default function Cases() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by case title, party or keywords..."
+              placeholder="Filter cases by title, party or description..."
               className="w-full pl-10 pr-4 py-2.5 bg-surface border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors"
             />
           </div>
         </div>
 
-        {/* Case List */}
+        {/* Case List / Skeletons */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse h-48 bg-surface/50 border-white/5">
-                <div className="h-4 bg-white/10 rounded w-3/4 mb-3" />
-                <div className="h-3 bg-white/5 rounded w-1/2 mb-6" />
-                <div className="h-3 bg-white/5 rounded w-full mb-2" />
-                <div className="h-3 bg-white/5 rounded w-2/3" />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="p-6 bg-surface border-white/5 animate-pulse flex flex-col justify-between h-52">
+                <div>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="h-6 bg-white/10 rounded w-2/3" />
+                    <div className="h-5 bg-white/5 rounded-full w-14" />
+                  </div>
+                  <div className="space-y-2 mb-6">
+                    <div className="h-3.5 bg-white/5 rounded w-full" />
+                    <div className="h-3.5 bg-white/5 rounded w-4/5" />
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                  <div className="h-3.5 bg-white/5 rounded w-1/3" />
+                  <div className="h-3.5 bg-white/5 rounded w-1/4" />
+                </div>
               </Card>
             ))}
           </div>
         ) : filteredCases.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center py-16 text-center border-dashed border-white/10">
-            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-              <FolderOpen className="w-7 h-7 text-white/30" />
+          <Card className="flex flex-col items-center justify-center py-20 text-center border-dashed border-white/10">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+              <FolderOpen className="w-8 h-8 text-white/30" />
             </div>
-            <p className="text-white/80 font-medium text-base">
+            <p className="text-white/80 font-medium text-lg">
               {search ? 'No cases match your search' : 'No cases recorded yet'}
             </p>
-            <p className="text-white/40 text-xs mt-1 max-w-sm">
+            <p className="text-white/40 text-xs mt-1.5 max-w-sm leading-relaxed">
               {search
-                ? 'Try searching with different terms or clear the filter.'
-                : 'Start tracking electronic evidence by creating your first case workspace.'}
+                ? 'Try adjusting your search query or clear the filter to view all cases.'
+                : 'Initialize an electronic case matter to begin logging custody chains and generating Section 63 BSA certificates.'}
             </p>
             {!search && (
-              <Button size="sm" onClick={() => setModalOpen(true)} className="mt-5 gap-1.5">
+              <Button size="sm" onClick={() => setModalOpen(true)} className="mt-6 gap-1.5">
                 <Plus className="w-4 h-4" />
                 <span>Create First Case</span>
               </Button>
@@ -147,35 +170,41 @@ export default function Cases() {
                 onClick={() => navigate(`/cases/${c._id}`)}
                 className="group cursor-pointer"
               >
-                <Card className="h-full flex flex-col justify-between hover:border-emerald-500/40 hover:bg-surface-2/60 transition-all duration-200">
+                <Card className="h-full flex flex-col justify-between p-6 bg-surface hover:bg-surface-2/80 border-white/10 hover:border-emerald-500/40 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/5">
                   <div>
+                    {/* Top row: Title in serif italic + evidence count badge */}
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <h2 className="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
+                      <h2 className="text-xl font-serif italic text-white group-hover:text-emerald-400 transition-colors line-clamp-2 leading-snug">
                         {c.title}
                       </h2>
-                      <Badge variant="neutral" size="sm" className="shrink-0 font-mono">
-                        {c.evidenceCount ?? 0} {c.evidenceCount === 1 ? 'file' : 'files'}
+                      <Badge variant="neutral" size="sm" className="shrink-0 font-mono mt-0.5">
+                        <FileCheck2 className="w-3 h-3 text-emerald-400/80 mr-1" />
+                        <span>{c.evidenceCount ?? 0}</span>
                       </Badge>
                     </div>
 
-                    <p className="text-xs text-white/50 line-clamp-2 mb-4 leading-relaxed">
-                      {c.description || 'No description provided.'}
+                    {/* Description snippet */}
+                    <p className="text-xs text-white/50 line-clamp-2 mb-5 leading-relaxed">
+                      {c.description || 'No case description entered.'}
                     </p>
                   </div>
 
-                  <div className="pt-4 border-t border-white/5 flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-xs text-white/60">
+                  {/* Bottom metadata */}
+                  <div className="pt-4 border-t border-white/5 space-y-2.5">
+                    {/* Party name */}
+                    <div className="flex items-center gap-2 text-xs text-white/70">
                       <User className="w-3.5 h-3.5 text-white/30 shrink-0" />
-                      <span className="truncate">{c.partyName}</span>
+                      <span className="truncate font-medium">{c.partyName}</span>
                     </div>
 
+                    {/* Created date & CTA */}
                     <div className="flex items-center justify-between text-[11px] text-white/40 pt-1">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3 h-3 text-white/20" />
-                        <span>{new Date(c.createdAt).toLocaleDateString()}</span>
+                        <span>{new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                       </div>
-                      <span className="text-emerald-400/80 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 font-medium">
-                        View case <ArrowRight className="w-3 h-3" />
+                      <span className="text-emerald-400/90 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 font-medium">
+                        Open case <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
                   </div>
@@ -185,11 +214,11 @@ export default function Cases() {
           </div>
         )}
 
-        {/* Create Case Modal */}
+        {/* New Case Modal */}
         <Modal
-          isOpen={modalOpen}
+          open={modalOpen}
           onClose={() => setModalOpen(false)}
-          title="Create New Case"
+          title="Create New Case Matter"
           description="Initialize a tamper-evident evidence registry for this legal proceeding or investigation."
         >
           <form onSubmit={handleCreateCase} className="space-y-4 pt-2">
@@ -203,7 +232,7 @@ export default function Cases() {
 
             <div>
               <label className="block text-xs font-medium text-white/70 mb-1.5">
-                Matter Description
+                Case Description
               </label>
               <textarea
                 rows={3}
